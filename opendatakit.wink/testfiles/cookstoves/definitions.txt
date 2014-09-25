@@ -1,0 +1,153 @@
+http://146.148.49.96/odktables/mezuri-10100233/tables/73b58020-2d91-11e4-8c21-0800200c9a66
+
+{
+  "tableId": "2894e800-2d92-11e4-8c21-0800200c9a66",
+  "orderedColumns": [
+    {
+      "elementKey": "ts",
+      "elementName": "ts",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "unit",
+      "elementName": "unit",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "value",
+      "elementName": "value",
+      "elementType": "number",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "filename",
+      "elementName": "filename",
+      "elementType": "string",
+      "listChildElementKeys": null
+    }
+  ]
+}
+
+http://146.148.49.96/odktables/mezuri-10100233/tables/2894e800-2d92-11e4-8c21-0800200c9a66
+
+{
+  "tableId": "2894e800-2d92-11e4-8c21-0800200c9a66",
+  "orderedColumns": [
+    {
+      "elementKey": "filename",
+      "elementName": "filename",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute1",
+      "elementName": "attribute1",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute2",
+      "elementName": "attribute2",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute3",
+      "elementName": "attribute3",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute4",
+      "elementName": "attribute4",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute5",
+      "elementName": "attribute5",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute6",
+      "elementName": "attribute6",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute7",
+      "elementName": "attribute7",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute8",
+      "elementName": "attribute8",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute9",
+      "elementName": "attribute9",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute10",
+      "elementName": "attribute10",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute11",
+      "elementName": "attribute11",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute12",
+      "elementName": "attribute12",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute13",
+      "elementName": "attribute13",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute14",
+      "elementName": "attribute14",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute15",
+      "elementName": "attribute15",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute16",
+      "elementName": "attribute16",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute17",
+      "elementName": "attribute17",
+      "elementType": "string",
+      "listChildElementKeys": null
+    },       
+    {
+      "elementKey": "attribute18",
+      "elementName": "attribute18",
+      "elementType": "string",
+      "listChildElementKeys": null
+    }
+  ]
+}
