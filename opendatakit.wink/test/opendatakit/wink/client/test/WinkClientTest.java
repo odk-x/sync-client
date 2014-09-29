@@ -19,27 +19,25 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.wink.client.WinkClient;
 
 public class WinkClientTest extends TestCase {
-  // String agg_url = "https://clarlars.appspot.com";
-  //String agg_url = "https://odk-test-area.appspot.com";
-  //String appId = "odktables/tables";
-  String absolutePathOfTestFiles = "testfiles/test/";
-  int batchSize = 1000;
-  /*String agg_url;
+  String agg_url;
   String appId;
   String absolutePathOfTestFiles;
-  int batchSize;*/
-
+  int batchSize;
+  
+  //String agg_url = "https://clarlars.appspot.com";
+  //String agg_url = "https://odk-test-area.appspot.com";
+  //String appId = "odktables/tables";
+  //String absolutePathOfTestFiles = "testfiles/test/";
+  //int batchSize = 1000;
 
   //String agg_url = "http://carcoal.cs.washington.edu:8888/odktables/odktables";
   //String agg_url = "http://146.148.49.96/odktables";
 
-  // String agg_url = "http://146.148.34.74:8080/dataservice/odktables";
-  // String agg_url = "http://146.148.34.74:8080/odktables/odktables";
+  //String agg_url = "http://146.148.34.74:8080/dataservice/odktables";
+  //String agg_url = "http://146.148.34.74:8080/odktables/odktables";
 
-  String agg_url = "http://107.178.213.121:8080/odktables";
-  String appId = "mezuri-10100233";
-
-
+  //String agg_url = "http://107.178.213.121:8080/odktables";
+  //String appId = "mezuri-10100233";
 
   /*
    * Perform setup for test if necessary
@@ -47,10 +45,10 @@ public class WinkClientTest extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    /*agg_url = System.getProperty("test.aggUrl");
+    agg_url = System.getProperty("test.aggUrl");
     appId = System.getProperty("test.appId");
     absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
-    batchSize = Integer.valueOf(System.getProperty("test.batchSize"));*/
+    batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
   }
 
   /*
@@ -215,6 +213,20 @@ public class WinkClientTest extends TestCase {
       e.printStackTrace();
     }
     return same;
+  }
+  
+  public void deleteFolder(File folder) {
+    File[] files = folder.listFiles();
+    if (files!=null) { 
+      for (File f: files) {
+        if (f.isDirectory()) {
+          deleteFolder(f);
+        } else {
+          f.delete();
+        }
+      }
+    }
+    folder.delete();
   }
 
   /*
@@ -1749,7 +1761,7 @@ public class WinkClientTest extends TestCase {
   }
 
   public void testPutFileForRowWithValidBinaryFile_ExpectPass() {
-    String testTableId = "test181";
+    String testTableId = "test18";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1797,9 +1809,9 @@ public class WinkClientTest extends TestCase {
 
       assertTrue(foundFile);
 
-      //wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
-      //assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1877,16 +1889,46 @@ public class WinkClientTest extends TestCase {
     String dirToGetDataFrom = absolutePathOfTestFiles + "dataToUpload";
     String dirToPushDataFrom = absolutePathOfTestFiles + "downloadedData";
     String tableSchemaETag = null;
-    String testTableId = "geoTagger";
+    String testTableId = "geotagger";
+    ArrayList<String> filesUploaded;
+    ArrayList<String> filesDownloaded;
+    ArrayList<String> cleanFilesUploaded = new ArrayList<String>();
+    ArrayList<String> cleanFilesDownloaded = new ArrayList<String>();
+    String dsStore = ".DS_Store";
 
     try {
       WinkClient wc = new WinkClient();
 
       wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom);
+      File fileDirToGetDataFrom = new File(dirToGetDataFrom);
+      filesUploaded = wc.recurseDir(fileDirToGetDataFrom);
 
+      File fileDirToPushDataFrom = new File(dirToPushDataFrom);
+      deleteFolder(fileDirToPushDataFrom);
       wc.getAllDataFromUri(agg_url, appId, dirToPushDataFrom);
+      filesDownloaded = wc.recurseDir(fileDirToPushDataFrom);
       
-      // Delete the geoTagger table defintion
+      // Remove any .DS_Store files
+      for (int i = 0; i < filesDownloaded.size(); i++) {
+        File tempFile = new File(filesDownloaded.get(i));
+        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
+        if (!fileName.equals(dsStore)) {
+          cleanFilesDownloaded.add(filesDownloaded.get(i));
+        }
+      }
+      
+      // Remove any .DS_Store files
+      for (int i = 0; i < filesUploaded.size(); i++) {
+        File tempFile = new File(filesUploaded.get(i));
+        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
+        if (!fileName.equals(dsStore)) {
+          cleanFilesUploaded.add(filesUploaded.get(i));
+        }
+      }
+      
+      assertEquals(cleanFilesDownloaded.size(), cleanFilesUploaded.size());
+      
+      // Delete the geotagger table defintion
       JSONObject result = wc.getTable(agg_url, appId, testTableId);
 
       if (result.containsKey("schemaETag")) {
@@ -1928,9 +1970,8 @@ public class WinkClientTest extends TestCase {
     String testTableId = "test40";
     String tableSchemaETag = null;
 
-    String csvFile = absolutePathOfTestFiles + "geoTaggerTest/definition.csv";
-    //String csvDataFile = absolutePathOfTestFiles + "geoTaggerTest/geotagger.csv";
-    String csvDataFile = absolutePathOfTestFiles + "geotagger.edited.csv";
+    String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
+    String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.edited.csv";
     try {
       WinkClient wc = new WinkClient();
 
@@ -1990,7 +2031,7 @@ public class WinkClientTest extends TestCase {
     }
   }
   
-  public void testCreateRowsUsingCSVBulkUploadWithAMediumAmoutOfData_ExpectPass() {
+  public void testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass() {
 	    String testTableId = "test41";
 	    String tableSchemaETag = null;
 
