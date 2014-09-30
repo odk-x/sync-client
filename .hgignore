@@ -1,3 +1,5 @@
+syntax: glob
+
 # Maven
 target
 pom.xml.*
@@ -6,5 +8,19 @@ release.properties
 # Mac
 .DS_Store
 
+# Eclipse
+.classpath
+.project
+.settings
+eclipsebin
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+classes
+
 tmp
 local.properties
+
