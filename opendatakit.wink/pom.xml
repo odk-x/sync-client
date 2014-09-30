@@ -22,6 +22,9 @@
 		<maven.surefire.plugin.version>2.16</maven.surefire.plugin.version>
 		<junit.version>4.11</junit.version>
 		<skipTests>true</skipTests>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
 	</properties>
 
     <repositories>
