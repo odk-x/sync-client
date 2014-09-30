@@ -23,6 +23,14 @@
 		<junit.version>4.11</junit.version>
 		<skipTests>true</skipTests>
 	</properties>
+
+    <repositories>
+        <repository>
+            <id>repo</id>
+            <url>file://${project.basedir}/repo</url>
+        </repository>
+    </repositories>
+
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>

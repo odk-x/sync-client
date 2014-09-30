@@ -1,0 +1,10 @@
+# Maven
+target
+pom.xml.*
+release.properties
+
+# Mac
+.DS_Store
+
+tmp
+local.properties
