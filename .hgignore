@@ -13,6 +13,7 @@ release.properties
 .project
 .settings
 eclipsebin
+.metadata*
 
 # IntelliJ
 .idea/
