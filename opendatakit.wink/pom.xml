@@ -27,12 +27,12 @@
 
   </properties>
 
-    <repositories>
-        <repository>
-            <id>repo</id>
-            <url>file://${project.basedir}/repo</url>
-        </repository>
-    </repositories>
+  <repositories>
+      <repository>
+          <id>repo</id>
+          <url>file://${project.basedir}/repo</url>
+      </repository>
+  </repositories>
 
   <dependencies>
     <dependency>
