@@ -296,6 +296,42 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testUploadFileWithValidAsciiFile_ExpectPass: expected pass for " + testFile);
     }
   }
+  
+  /*
+   * Test uploading ASCII file to server with .old extension
+   * Currently this test fails on Mezuri but it should pass - commenting this
+   * out until further investigation can be done.  
+   */
+//  public void testUploadFileWithValidAsciiFileAndOldExt_ExpectPass() {
+//
+//    String relativeTestFilePath = "assets/csv/geotagger.csv.old";
+//    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
+//    boolean foundFile = false;
+//
+//    try {
+//      WinkClient wc = new WinkClient();
+//
+//      // Check the data from the file
+//      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+//
+//      // Make sure that the file is on the server
+//      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+//
+//      assertTrue(foundFile);
+//
+//      // After we are done clean up the file
+//      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+//
+//      // Make sure the server no longer has the file
+//      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+//
+//      assertFalse(foundFile);
+//
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//      TestCase.fail("testUploadFileWithValidAsciiFile_ExpectPass: expected pass for " + testFile);
+//    }
+//  }
 
   /*
    * Test uploadFile when uri is null
