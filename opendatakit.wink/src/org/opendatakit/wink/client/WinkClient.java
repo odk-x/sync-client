@@ -195,9 +195,10 @@ public class WinkClient {
   /**
    * Gets the schemaETag for the table   
    * 
-   * @param uri the url for the server
+   * @param agg_url the url for the server
    * @param appId the application id 
    * @param tableId the table id for the table in question
+   * @return String to return schemaETag value
    */
   public static String getSchemaETagForTable(String agg_url, String appId, String tableId) {
 
