@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.zip.DataFormatException;
 
 import org.apache.http.HttpResponse;
@@ -35,6 +36,7 @@ import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
+import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,6 +106,12 @@ public class WinkClient {
   public static String jsonRowETag = "rowETag";
 
   public static String jsonFilterScope = "filterScope";
+  
+  public static String jsonTableId = "tableId";
+  
+  public static String jsonTables = "tables";
+  
+  public static String jsonSchemaETag = "schemaETag";
 
   public static String rowDefId = "_id";
 
@@ -182,6 +190,35 @@ public class WinkClient {
       return "application/octet-stream";
     }
     return mimeType;
+  }
+  
+  /**
+   * Gets the schemaETag for the table   
+   * 
+   * @param uri the url for the server
+   * @param appId the application id 
+   * @param tableId the table id for the table in question
+   */
+  public static String getSchemaETagForTable(String agg_url, String appId, String tableId) {
+
+    try {
+      WinkClient wc = new WinkClient();
+      JSONObject obj = wc.getTables(agg_url, appId);
+
+      JSONArray tables = obj.getJSONArray(jsonTables);
+
+      for (int i = 0; i < tables.size(); i++) {
+        JSONObject table = tables.getJSONObject(i);
+        if (tableId.equals(table.getString(jsonTableId))) {
+          return table.getString(jsonSchemaETag);
+        }
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return null;
   }
 
   /**
@@ -781,6 +818,92 @@ public class WinkClient {
         .put(String.class, tableObj.toString());
 
     System.out.println("createTable: result is for tableId " + tableId + " is " + res.toString());
+
+    result = new JSONObject(res);
+
+    return result;
+  }
+  
+  /**
+   * Creates a table on the server with the specified
+   * tableId and JSONObject.  schemaETag should be null if
+   * a new table is being created.
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param jsonTableCreationObject a jsonObject that holds the values used to create a table definition
+   * @return a JSONObject with the representation of the newly created table
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public JSONObject createTableWithJSON(String uri, String appId, String tableId, String schemaETag,
+      String jsonTableCreationObject) throws Exception {
+    JSONObject tableObj = new JSONObject();
+    JSONObject col;
+    JSONObject result = null;
+
+    if (uri == null || uri.isEmpty()) {
+      throw new IllegalArgumentException("createTableWithJSON: uri cannot be null");
+    }
+
+    if (tableId == null || tableId.isEmpty()) {
+      throw new IllegalArgumentException("createTableWithJSON: tableId cannot be null");
+    }
+
+    if (jsonTableCreationObject == null || jsonTableCreationObject.isEmpty()) {
+      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject cannot be null");
+    }
+
+    RestClient restClient = new RestClient();
+
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
+    System.out.println("createTableWithJSON: agg_uri is " + agg_uri);
+    
+    tableObj = new JSONObject(jsonTableCreationObject);
+    
+    if (!tableObj.containsKey("schemaETag")) {
+      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have schemaETag");
+    }
+
+    if (!tableObj.containsKey("tableId")) {
+      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have tableId");
+    }
+    
+    if (!tableObj.containsKey("orderedColumns")) {
+      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have orderedColumns");
+    }
+    
+    JSONArray columns = tableObj.getJSONArray("orderedColumns");
+    
+    // Add the columns to the table object
+    for (int i = 0; i < columns.size(); i++) {
+      col = columns.getJSONObject(i);
+      
+      if (!col.containsKey("elementKey")) {
+        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementKey");
+      }
+      
+      if (!col.containsKey("elementName")) {
+        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementName");
+      }
+      
+      if (!col.containsKey("elementType")) {
+        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementType");
+      }
+      
+      if (!col.containsKey("listChildElementKeys")) {
+        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have listChildElementKeys");
+      }
+    }
+
+    System.out.println("createTableWithJSON: with object " + tableObj.toString());
+
+    Resource resource = restClient.resource(agg_uri);
+    String res = resource.accept("application/json").contentType("application/json")
+        .put(String.class, tableObj.toString());
+
+    System.out.println("createTableWithJSON: result is for tableId " + tableId + " is " + res.toString());
 
     result = new JSONObject(res);
 
@@ -1695,6 +1818,106 @@ public class WinkClient {
 //    
 //      //System.out.println("createRowsUsingCSVBulkUpload: result with tableId " + tableId + " is " + res);
 //  }
+  
+  /**
+   * Creates rows in the table associated with
+   * the tableId and schemaETag using a JSONArray
+   * of rows.  This function should be used
+   * when there are thousands of rows of data to
+   * upload. 
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param jsonRows a JSONArray of rows to insert into the database
+   * @param batchSize the number of rows that will be uploaded to the server at one time
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public void createRowsUsingJSONBulkUpload(String uri, String appId, String tableId,
+      String schemaETag, String jsonRows, int batchSize) throws Exception {
+    
+    // Default values for rows
+    String rowId = "uuid:" + UUID.randomUUID().toString();
+    String formId = null;
+    String locale = Locale.ENGLISH.getLanguage();
+    String savepointType = SavepointTypeManipulator.complete();
+    String savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+    String savepointCreator = "anonymous";
+    Scope defaultScope = Scope.EMPTY_SCOPE;
+
+    if (batchSize == 0) {
+      batchSize = 500;
+    }
+
+    JSONObject rowWrapperObj = new JSONObject(jsonRows);
+    JSONArray rowsObj = rowWrapperObj.getJSONArray("rows");
+    JSONObject rowObj = null;
+    
+    // No Row Id for bulk upload
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriRowsFragment;
+
+    ArrayList<Row> rowArrayList = new ArrayList<Row>();
+
+    for (int i = 0; i < rowsObj.size(); i++) {
+      rowObj = rowsObj.getJSONObject(i);
+
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+
+      JSONArray orderedCols = rowObj.getJSONArray(orderedColumnsDef);
+      
+      for (int j = 0; j < orderedCols.size(); j++) {
+        JSONObject col = orderedCols.getJSONObject(j);
+        DataKeyValue dkv = new DataKeyValue(col.getString("column"), col.getString("value"));
+        dkvl.add(dkv);
+      }
+      
+      if (rowObj.containsKey(jsonId)) {
+        rowId = rowObj.getString(jsonId);
+      }
+      
+      if (rowObj.containsKey(jsonFormId)) {
+        formId = rowObj.getString(jsonFormId);
+      }
+      
+      if (rowObj.containsKey(jsonLocale)) {
+        locale = rowObj.getString(jsonLocale);
+      }
+      
+      if (rowObj.containsKey(jsonSavepointType)) {
+        savepointType = rowObj.getString(jsonSavepointType);
+      }
+      
+      if (rowObj.containsKey(jsonSavepointTimestamp)) {
+        savepointTimestamp = rowObj.getString(jsonSavepointTimestamp);
+      }
+      
+      if (rowObj.containsKey(jsonSavepointCreator)) {
+        savepointCreator = rowObj.getString(jsonSavepointCreator);
+      }
+      
+      if (rowObj.containsKey(jsonFilterScope)) {
+        JSONObject filterObj = rowObj.getJSONObject(jsonFilterScope);
+        defaultScope = Scope.asScope(filterObj.getString("type"), filterObj.getString("value"));
+      }
+      
+      Row row = Row.forInsert(rowId, formId, locale, savepointType, savepointTimestamp, savepointCreator, defaultScope, dkvl);
+
+      rowArrayList.add(row);
+
+      if (rowArrayList.size() >= batchSize) {
+        bulkRowsSender(rowArrayList, agg_uri, tableId, true);
+
+        rowArrayList = new ArrayList<Row>();
+      }
+    }
+
+    if (rowArrayList.size() > 0) {
+
+      bulkRowsSender(rowArrayList, agg_uri, tableId, true);
+    }
+  }
    
   /**
    * Creates rows in the table associated with

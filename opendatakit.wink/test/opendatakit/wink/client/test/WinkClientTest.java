@@ -13,6 +13,7 @@ import junit.framework.TestCase;
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONObject;
 import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
+import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
@@ -856,59 +857,12 @@ public class WinkClientTest extends TestCase {
   }
 
   /*
-   * test createTable with string value
-   */
-  public void testCreateTableWithString_ExpectPass() {
-
-    String testTableId = "test1";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-
-    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-      if (tableDef.containsKey("orderedColumns")) {
-        JSONArray cols = tableDef.getJSONArray("orderedColumns");
-        for (int i = 0; i < cols.size(); i++) {
-          JSONObject col = cols.getJSONObject(i);
-          String testElemKey = col.getString("elementKey");
-          assertEquals(colKey, testElemKey);
-        }
-      }
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testCreateTableWithString: expected pass");
-    }
-  }
-
-  /*
    * test createTable when uri is null
    */
   public void testCreateTableWhenUriIsNull_ExpectFail() {
 
     String testTableId = "test2";
-    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String testTableSchemaETag = "testCreateTableWhenUriIsNull_ExpectFail";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -940,7 +894,7 @@ public class WinkClientTest extends TestCase {
     String colKey = "scan_output_directory";
     String colType = "string";
     String listOfChildElements = "[]";
-    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String testTableSchemaETag = "testCreateTableWhenTableIdIsNull_ExpectFail";
     boolean thrown = false;
 
     try {
@@ -1010,7 +964,7 @@ public class WinkClientTest extends TestCase {
    */
   public void testCreateTableWhenColumnsIsNull_ExpectFail() {
     String testTableId = "test3";
-    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String testTableSchemaETag = "testCreateTableWhenColumnsIsNull_ExpectFail";
     boolean thrown = false;
 
     try {
@@ -1061,6 +1015,47 @@ public class WinkClientTest extends TestCase {
           .fail("testCreateTableWithCSVAndValidData_ExpectPass: expected pass for creating table with CSV");
     }
 
+  }
+  
+  /*
+   * test createTableWithJSON with valid data
+   */
+  public void testCreateTableWithJSON_ExpectPass() {
+
+    String testTableId = "test22";
+    String tableSchemaETag = null;
+    String jsonString = "{\"orderedColumns\":[{\"elementKey\":\"Date_and_Time\",\"elementType\":\"dateTime\",\"elementName\":\"Date_and_Time\",\"listChildElementKeys\":\"[]\"}],\"tableId\":\"testDate\",\"schemaETag\":null}";
+    
+    try {
+      WinkClient wc = new WinkClient();
+
+      JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
+      System.out.println("testCreateTableWithJSON_ExpectPass: result is " + result);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      // Get the table definition
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
+        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
+        assertEquals(cols.size(), 1);
+        JSONObject col = cols.getJSONObject(cols.size() - 1);
+        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
+      }
+
+      // Now delete the table
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase
+          .fail("testCreateTableWithCSVAndValidData_ExpectPass: expected pass for creating table with CSV");
+    }
   }
   
   /*
@@ -2001,6 +1996,174 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testPushAllDataToUri_ExpectPass: expected pass");
     }
   }
+  
+  public void testCreateRowsUsingJSONBulkUpload_ExpectPass() {
+    String testTableId = "test23";
+    String tableSchemaETag = null;
+    String jsonString = "{\"orderedColumns\":[{\"elementKey\":\"Date_and_Time\",\"elementType\":\"dateTime\",\"elementName\":\"Date_and_Time\",\"listChildElementKeys\":\"[]\"}],\"tableId\":\"testDate\",\"schemaETag\":null}";
+    JSONObject rowsWrapper = new JSONObject();
+    JSONObject tempRow = null;
+    JSONArray rowsObj = new JSONArray();
+    String jsonRows = null;
+    int testSize = 200;
+    int testBatchSize = 50;
+    
+    try {
+      WinkClient wc = new WinkClient();
+
+      JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
+      System.out.println("testCreateRowsUsingJSONBulkUpload_ExpectPass: result is " + result);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      // Get the table definition
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
+        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
+        assertEquals(cols.size(), 1);
+        JSONObject col = cols.getJSONObject(cols.size() - 1);
+        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
+      }
+      
+      // Create Rows for the newly created table
+      for (int i = 0; i < testSize; i++) {
+        
+        tempRow = new JSONObject();
+        tempRow.put(WinkClient.jsonId, Integer.toString(i));
+        
+        JSONArray ordCols = new JSONArray();
+        JSONObject col = new JSONObject();
+        col.put("column", "Date_and_Time");
+        col.put("value", TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
+        ordCols.add(col);
+        
+        tempRow.put(WinkClient.orderedColumnsDef, ordCols);
+        System.out.print("testCreateRowsUsingJSONBulkUpload_ExpectPass: tempRow is " + tempRow.toString());
+        rowsObj.add(tempRow);
+      }
+      
+      rowsWrapper.put("rows", rowsObj);
+
+      jsonRows = rowsWrapper.toString();
+      wc.createRowsUsingJSONBulkUpload(agg_url, appId, testTableId, tableSchemaETag, jsonRows, testBatchSize);
+
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), testSize);
+
+      // Now delete the table
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testCreateRowsUsingJSONBulkUpload_ExpectPass: expected pass");
+    }
+  }
+  
+  /*
+   * test getSchemaETagForTable 
+   */
+  public void testGetSchemaETagForTable_ExpectPass() {
+
+    String testTableId = "test24";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+
+    String testTableSchemaETag = "testGetSchemaETagForTable_ExpectPass";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+      
+      String eTag = wc.getSchemaETagForTable(agg_url, appId, testTableId);
+      
+      assertEquals(tableSchemaETag, eTag);
+
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      if (tableDef.containsKey("orderedColumns")) {
+        JSONArray cols = tableDef.getJSONArray("orderedColumns");
+        for (int i = 0; i < cols.size(); i++) {
+          JSONObject col = cols.getJSONObject(i);
+          String testElemKey = col.getString("elementKey");
+          assertEquals(colKey, testElemKey);
+        }
+      }
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetSchemaETagForTable_ExpectPass: expected pass");
+    }
+  }
+  
+  /*
+   * test createTable with string value
+   */
+  public void testCreateTableWithString_ExpectPass() {
+
+    String testTableId = "test1";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+
+    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      if (tableDef.containsKey("orderedColumns")) {
+        JSONArray cols = tableDef.getJSONArray("orderedColumns");
+        for (int i = 0; i < cols.size(); i++) {
+          JSONObject col = cols.getJSONObject(i);
+          String testElemKey = col.getString("elementKey");
+          assertEquals(colKey, testElemKey);
+        }
+      }
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testCreateTableWithString: expected pass");
+    }
+  }
 
   public void testCreateRowsUsingCSVBulkUpload_ExpectPass() {
     String testTableId = "test40";
@@ -2068,7 +2231,7 @@ public class WinkClientTest extends TestCase {
   }
   
   public void testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass() {
-	    String testTableId = "test41";
+	    String testTableId = "test42";
 	    String tableSchemaETag = null;
 
 	    String csvFile = absolutePathOfTestFiles + "cookstoves/data_definition.csv";
@@ -2098,7 +2261,7 @@ public class WinkClientTest extends TestCase {
 	  }
     
   public void testCreateRowsUsingCSVInputStreamBulkUploadWithLotsOfData_ExpectPass() {
-    String testTableId = "test42";
+    String testTableId = "test43";
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "cookstoves/data_definition.csv";
