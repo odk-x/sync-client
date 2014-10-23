@@ -4,7 +4,7 @@
   <groupId>org.opendatakit</groupId>
   <artifactId>wink</artifactId>
   <packaging>jar</packaging>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.2-SNAPSHOT</version>
   <name>ODK Wink REST Client</name>
   <properties>
     <com.fasterxml.jackson.base.version>2.4.1</com.fasterxml.jackson.base.version>

@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.UUID;
 
 import junit.framework.TestCase;
@@ -854,6 +857,53 @@ public class WinkClientTest extends TestCase {
     }
 
     assertTrue(thrown);
+  }
+  
+  /*
+   * test createTable with string value
+   */
+  public void testCreateTableWithString_ExpectPass() {
+
+    String testTableId = "test1";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+
+    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      if (tableDef.containsKey("orderedColumns")) {
+        JSONArray cols = tableDef.getJSONArray("orderedColumns");
+        for (int i = 0; i < cols.size(); i++) {
+          JSONObject col = cols.getJSONObject(i);
+          String testElemKey = col.getString("elementKey");
+          assertEquals(colKey, testElemKey);
+        }
+      }
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testCreateTableWithString: expected pass");
+    }
   }
 
   /*
@@ -2119,18 +2169,22 @@ public class WinkClientTest extends TestCase {
   }
   
   /*
-   * test createTable with string value
+   * test create row with UTF-8
    */
-  public void testCreateTableWithString_ExpectPass() {
+  public void testCreateOrUpdateRowWithUTF8_ExpectPass() {
 
-    String testTableId = "test1";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
+    String testTableId = "test25";
+    String colName = "utf_test_col";
+    String colKey = "utf_test_col";
     String colType = "string";
+    String utf_val = "तुरंत अस्पताल रेफर करें व रास्ते मैं शिशु को ओ. आर. एस देतेरहें";
 
-    String testTableSchemaETag = "testCreateTableWithString_ExpectPass";
+    String testTableSchemaETag = "testCreateOrUpdateRowWithUTF8_ExpectPass";
     String tableSchemaETag = null;
     String listOfChildElements = "[]";
+    
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
 
     try {
       WinkClient wc = new WinkClient();
@@ -2156,12 +2210,145 @@ public class WinkClientTest extends TestCase {
           assertEquals(colKey, testElemKey);
         }
       }
+      
+      DataKeyValue dkv = new DataKeyValue(colKey, utf_val);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+
+      // Now check that the row was created with the right rowId
+      assertEquals(RowId, res.getString("id"));
+      
+      if (res.has(WinkClient.orderedColumnsDef)) {
+        JSONArray ordCols = res.getJSONArray(WinkClient.orderedColumnsDef);
+        assertEquals(1, ordCols.size());
+        JSONObject col = ordCols.getJSONObject(0);
+        String recVal = col.getString("value");
+        assertEquals(recVal, utf_val);
+        assertEquals(recVal.equals(utf_val), true);
+      }
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
     } catch (Exception e) {
       e.printStackTrace();
-      TestCase.fail("testCreateTableWithString: expected pass");
+      TestCase.fail("testCreateOrUpdateRowWithUTF8_ExpectPass: expected pass");
+    }
+  }
+  
+  /*
+   * test query in time range with last update date 
+   */
+  public void testQueryRowsInTimeRangeWithLastUpdateDate_ExpectPass() {
+    String testTableId = "test26";
+    String colName = "seq_num";
+    String colKey = "seq_num";
+    String colType = "string";
+
+    String testTableSchemaETag = "createRowsForQueryTest";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+    
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+    Date date = new Date(0);
+    String startTime = dateFormat.format(date); 
+    
+    int sizeOfSeqTable = 50;
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      for (int i = 0; i < sizeOfSeqTable; i++) {
+        DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
+        ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+        dkvl.add(dkv);
+        String RowId = "uuid:" + UUID.randomUUID().toString();
+        Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+        wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+      }
+
+      JSONObject res = wc.queryRowsInTimeRangeWithLastUpdateDate(agg_url, appId, testTableId, tableSchemaETag, startTime, null, null, null);
+      
+      if (res.containsKey("rows")) {
+        JSONArray rowsObj = res.getJSONArray("rows");
+        assertEquals(rowsObj.size(), sizeOfSeqTable);
+        
+      }
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testQueryRowsInTimeRangeWithLastUpdateDate_ExpectPass: expected pass");
+    }
+  }
+  
+  /*
+   * test query in time range with savepointTimestamp date 
+   */
+  public void testQueryRowsInTimeRangeWithSavepointTimestamp_ExpectPass() {
+    String testTableId = "test27";
+    String colName = "seq_num";
+    String colKey = "seq_num";
+    String colType = "string";
+
+    String testTableSchemaETag = "createRowsForQueryTest";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+    
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+    Date date = new Date();
+    String startTime = dateFormat.format(date); 
+    
+    int sizeOfSeqTable = 50;
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      for (int i = 0; i < sizeOfSeqTable; i++) {
+        DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
+        ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+        dkvl.add(dkv);
+        String RowId = "uuid:" + UUID.randomUUID().toString();
+        Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+        wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+      }
+
+      JSONObject res = wc.queryRowsInTimeRangeWithSavepointTimestamp(agg_url, appId, testTableId, tableSchemaETag, startTime, null, null, null);
+      
+      if (res.containsKey("rows")) {
+        JSONArray rowsObj = res.getJSONArray("rows");
+        assertEquals(rowsObj.size(), sizeOfSeqTable);
+        
+      }
+      
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testQueryRowsInTimeRangeWithSavepointTimestamp_ExpectPass: expected pass");
     }
   }
 

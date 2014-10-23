@@ -49,6 +49,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  */
 public class WinkClient {
+  public static String queryParamDataETag = "data_etag=";
+
+  public static String queryParamFetchLimit = "fetchLimit=";
+
+  public static String queryParamCursor = "cursor=";
+  
+  public static String queryParamStartTime = "startTime=";
+  
+  public static String queryParamEndTime = "endTime=";
+
   public static String t = "WinkClient";
 
   public static String uriFilesFragment = "/files/1/";
@@ -56,6 +66,12 @@ public class WinkClient {
   public static String uriTablesFragment = "/tables";
 
   public static String uriManifest = "/manifest/1";
+  
+  public static String uriLastUpdateDateFragment = "/lastUpdateDate";
+  
+  public static String uriSavepointTimestamp = "/savepointTimestamp";
+  
+  public static String uriQueryFragment = "/query";
 
   public static String uriRefFragment = "/ref/";
 
@@ -1194,21 +1210,21 @@ public class WinkClient {
     }
 
     if (useCursor) {
-      agg_uri = agg_uri + "cursor=" + cursor;
+      agg_uri = agg_uri + queryParamCursor + cursor;
       if (useFetchLimit || useDataETag) {
         agg_uri = agg_uri + "&";
       }
     }
 
     if (useFetchLimit) {
-      agg_uri = agg_uri + "fetchLimit=" + fetchLimit;
+      agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
       if (useDataETag) {
         agg_uri = agg_uri + "&";
       }
     }
 
     if (useDataETag) {
-      agg_uri = agg_uri + "data_etag=" + dataETag;
+      agg_uri = agg_uri + queryParamDataETag + dataETag;
     }
 
     Resource tableResource = restClient.resource(agg_uri);
@@ -1260,13 +1276,13 @@ public class WinkClient {
       }
       
       if (useFetchLimit) {
-        agg_uri = agg_uri + "fetchLimit=" + fetchLimit;
+        agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
         if (useCursor)
           agg_uri = agg_uri + "&";
       }
 
       if (useCursor) {
-        agg_uri = agg_uri + "cursor=" + cursor;
+        agg_uri = agg_uri + queryParamCursor + cursor;
       }
 
       Resource tableResource = restClient.resource(agg_uri);
@@ -2268,6 +2284,122 @@ public class WinkClient {
     in.close();
 
     return;
+  }
+  
+  /**
+   * Returns a JSONObject of the rows that can 
+   * be found in a table specified tableId and 
+   * schemaETag in the range of a specified
+   * startTime and endTime using lastUpdateDate
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param startTime a required timestamp used to get all rows with a time greater than or equal to it.  
+   * The format of startTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param endTime an optional timestamp used to get all rows with a time less than or equal to it.  
+   * The format for endTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param cursor query parameter that identifies the point at which to 
+   * resume the query
+   * @param fetchLimit query parameter that defines the number of rows to 
+   * return
+   * @return a JSONObject with the row data
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public JSONObject queryRowsInTimeRangeWithLastUpdateDate(String uri, String appId, String tableId, String schemaETag,
+      String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
+    JSONObject obj = null;
+
+    if (startTime == null || startTime.isEmpty()) {
+      throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
+    }
+    
+    RestClient restClient = new RestClient();
+
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriQueryFragment + uriLastUpdateDateFragment;
+    
+    agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
+    
+    if (endTime != null && !endTime.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
+    }
+
+    if (cursor != null && !cursor.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamCursor + cursor;
+    }
+
+    if (fetchLimit != null && !fetchLimit.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
+    }
+
+    Resource tableResource = restClient.resource(agg_uri);
+    System.out.println("queryRowsInTimeRangeWithLastUpdateDate: agg uri is " + agg_uri);
+
+    String tableRes = tableResource.accept("application/json").get(String.class);
+    obj = new JSONObject(tableRes);
+    System.out.println("queryRowsInTimeRangeWithLastUpdateDate: result for " + tableId + " is " + obj.toString());
+
+    return obj;
+  }
+    
+  /**
+   * Returns a JSONObject of the rows that can 
+   * be found in a table specified tableId and 
+   * schemaETag in the range of a specified
+   * startTime and endTime using savepointTimestamp
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param startTime a required timestamp used to get all rows with a time greater than or equal to it.  
+   * The format of startTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param endTime an optional timestamp used to get all rows with a time less than or equal to it.  
+   * The format for endTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param cursor query parameter that identifies the point at which to 
+   * resume the query
+   * @param fetchLimit query parameter that defines the number of rows to 
+   * return
+   * @return a JSONObject with the row data
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public JSONObject queryRowsInTimeRangeWithSavepointTimestamp(String uri, String appId, String tableId, String schemaETag,
+      String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
+    JSONObject obj = null;
+
+    if (startTime == null || startTime.isEmpty()) {
+      throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
+    }
+    
+    RestClient restClient = new RestClient();
+
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriQueryFragment + uriSavepointTimestamp;
+    
+    agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
+    
+    if (endTime != null && !endTime.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
+    }
+
+    if (cursor != null && !cursor.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamCursor + cursor;
+    }
+
+    if (fetchLimit != null && !fetchLimit.isEmpty()) {
+      agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
+    }
+
+    Resource tableResource = restClient.resource(agg_uri);
+    System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
+
+    String tableRes = tableResource.accept("application/json").get(String.class);
+    obj = new JSONObject(tableRes);
+    System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId + " is " + obj.toString());
+
+    return obj;
   }
 
 }
