@@ -358,11 +358,11 @@ public class WinkClient {
     ArrayList<String> instanceFiles = new ArrayList<String>();
 
     // Get all files in the assets directory
-    String assetsDir = dirToGetDataFrom + separator + "assets";
+    String assetsDir = dirToGetDataFrom + File.separator + "assets";
     assetsFiles = recurseDir(new File(assetsDir));
 
     // Get all the tableIds in the tables directory
-    String tablesDir = dirToGetDataFrom + separator + "tables";
+    String tablesDir = dirToGetDataFrom + File.separator + "tables";
     tableIds = findTopLevelSubdirectories(new File(tablesDir));
 
     for (int i = 0; i < tableIds.size(); i++) {
@@ -370,7 +370,7 @@ public class WinkClient {
       JSONObject tableResult = null;
       String schemaETag = null;
       String tableId = tableIds.get(i);
-      String tableDefPath = tablesDir + separator + tableId + separator + "definition.csv";
+      String tableDefPath = tablesDir + File.separator + tableId + File.separator + "definition.csv";
       File tableDefCSV = new File(tableDefPath);
       if (tableDefCSV.exists()) {
         tableResult = createTableWithCSV(uri, appId, tableId, "", tableDefPath);
@@ -380,7 +380,7 @@ public class WinkClient {
       }
 
       // Create table rows
-      String dataRowPath = assetsDir + separator + "csv" + separator + tableId + ".csv";
+      String dataRowPath = assetsDir + File.separator + "csv" + File.separator + tableId + ".csv";
       File dataRowCSV = new File(dataRowPath);
       if (dataRowCSV.exists()) {
         // createRowsUsingCSV(uri, appId, tableId, schemaETag, dataRowPath);
@@ -406,10 +406,10 @@ public class WinkClient {
       } while(obj.getBoolean("hasMoreResults"));
       
       // Find table Id Files and push up
-      String tableIdPath = tablesDir + separator + tableId;
+      String tableIdPath = tablesDir + File.separator + tableId;
       tableFiles = recurseDir(new File(tableIdPath));
 
-      String tableInstancesPath = tableIdPath + separator + "instances";
+      String tableInstancesPath = tableIdPath + File.separator + "instances";
       for (int j = 0; j < tableFiles.size(); j++) {
         if (tableFiles.get(j).startsWith(tableInstancesPath)) {
           instanceFiles.add(tableFiles.get(j));
@@ -425,7 +425,7 @@ public class WinkClient {
         String filePath = instanceFiles.get(j);
         File instanceFile = new File(filePath);
         String parentPath = instanceFile.getParent();
-        String instanceRowId = parentPath.substring(parentPath.lastIndexOf(separator) + 1);
+        String instanceRowId = parentPath.substring(parentPath.lastIndexOf(File.separator) + 1);
         String rowIdToUse = mapRowIdToInstanceDir.get(instanceRowId);
         // Relative path is just file name here
         putFileForRow(uri, appId, tableId, schemaETag, rowIdToUse, filePath,
@@ -598,7 +598,8 @@ public class WinkClient {
       throw new IllegalArgumentException("uploadFile: relativePathOnServer cannot be null");
     }
 
-    String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
+    String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator, separator);
+    String agg_uri = uri + separator + appId + uriFilesFragment + uriRelativePath;
     System.out.println("uploadFile: agg uri is " + agg_uri);
 
     File file = new File(wholePathToFile);
