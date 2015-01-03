@@ -35,6 +35,7 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
+import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 
@@ -128,6 +129,8 @@ public class WinkClient {
   public static String jsonTables = "tables";
   
   public static String jsonSchemaETag = "schemaETag";
+  
+  public static String jsonDataETag = "dataETag";
 
   public static String rowDefId = "_id";
 
@@ -1587,255 +1590,92 @@ public class WinkClient {
   public void mapUserCSVToProprietaryCSV(String pathToUserCSV, String pathToCSV) {
 
   }
-
-  
-//  public JSONObject createOrUpdateRow(String uri, String appId, String tableId, String schemaETag, Row row) throws Exception { 
-//    JSONObject rowObj = new JSONObject();
-//
-//   RestClient restClient = new RestClient();
-//    
-//   String rowId = row.getRowId();
-//    
-//    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId; 
-//    System.out.println("createOrUpdateRow: agg_uri is " + agg_uri);
-//    
-//    rowObj = mapRowToJSONObject(row);
-//    
-//    Resource resource = restClient.resource(agg_uri);
-//    
-//    System.out.println("createOrUpdateRow: rowObj is " + rowObj.toString());
-//    
-//    String res = resource.accept("application/json").contentType("application/json").put(String.class, rowObj.toString());
-//    
-//    System.out.println("createOrUpdateRow: result is for rowId " + rowId + " with tableId " + tableId + " is " + res);
-//    
-//    JSONObject result = new JSONObject(res); return result;
-//    
-//    }
    
   /**
-   * Creates a row in the table associated with
-   * the tableId and schemaETag 
-   * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param row a Row object that defines the row data to insert
-   * @return a JSONObject with the representation of the newly created row
-   * @throws Exception any exception encountered is thrown to the caller
-   */
-  public JSONObject createOrUpdateRow(String uri, String appId, String tableId, String schemaETag,
-      Row row) throws Exception {
-
-    JSONObject rowObj = new JSONObject();
-
-    // RestClient restClient = new RestClient();
-    DefaultHttpClient httpClient = new DefaultHttpClient();
-
-    String rowId = row.getRowId();
-
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId;
-    System.out.println("createOrUpdateRow: agg_uri is " + agg_uri);
-
-    rowObj = mapRowToJSONObject(row);
-
-    // Resource resource = restClient.resource(agg_uri);
-    HttpPut request = new HttpPut(agg_uri);
-
-    System.out.println("createOrUpdateRow: rowObj is " + rowObj.toString());
-
-    // String res =
-    // resource.accept("application/json").contentType("application/json").put(String.class,
-    // rowObj.toString());
-    StringEntity params = new StringEntity(rowObj.toString());
-    request.addHeader("content-type", "application/json");
-    request.addHeader("accept", "application/json");
-    request.setEntity(params);
-    HttpResponse response = httpClient.execute(request);
-
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-    StringBuilder strLine = new StringBuilder();
-    String line;
-    while ((line = rd.readLine()) != null) {
-      strLine.append(line);
-    }
-
-    System.out.println("createOrUpdateRow: result is for rowId " + rowId + " with tableId "
-        + tableId + " is " + strLine.toString());
-
-    httpClient.close();
-
-    JSONObject result = new JSONObject(strLine.toString());
-    return result;
-  }
-
-  /**
    * Creates rows in the table associated with
-   * the tableId and schemaETag using a CSV file 
+   * the tableId and schemaETag using bulk upload
    * 
    * @param uri the url for the server
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
-   * @param csvFilePath the file path from which to retrieve the row data
+   * @param rowArrayList an ArrayList of rows to create
+   * @param batchSize used to set the batch size of rows sent to the server - 
+   * if 0 is passed in, the default of 500 is used 
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void createRowsUsingCSV(String uri, String appId, String tableId, String schemaETag,
-      String csvFilePath) throws Exception {
+  public void createRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag,
+      ArrayList<Row> rowArrayList, int batchSize) throws Exception {
+      
+    // Default values for rows
+    String rowId = null;
+    String locale = Locale.ENGLISH.getLanguage();
+    String savepointType = SavepointTypeManipulator.complete();
+    String savepointTimestamp = null;
+    String savepointCreator = "anonymous";
+    Scope defaultScope = Scope.EMPTY_SCOPE;
+    String dataETag = null;
+    JSONObject tableRes = null;
 
-    RFC4180CsvReader reader;
-    // LinkedHashMap<String, String> kvm;
-
-    File file = new File(csvFilePath);
-    if (!file.exists()) {
-      System.out.println("createRowsUsingCSV: file " + csvFilePath + " does not exist");
+    if (batchSize == 0) {
+      batchSize = 500;
     }
-    InputStream in = new FileInputStream(file);
-    InputStreamReader inputStream = new InputStreamReader(in);
-    reader = new RFC4180CsvReader(inputStream);
+    
+    // No Row Id for bulk upload
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriRowsFragment;
 
-    // Make sure that the first line of the csv file
-    // has the right header
-    String[] firstLine = reader.readNext();
-    int numOfCols = firstLine.length;
+    ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
-    // Make sure that the first row of the csv file
-    // has the right columns
-    if (!firstLine[0].equals(rowDefId) || !firstLine[1].equals(rowDefFormId)
-        || !firstLine[2].equals(rowDefLocale) || !firstLine[3].equals(rowDefSavepointType)
-        || !firstLine[4].equals(rowDefSavepointTimestamp)
-        || !firstLine[5].equals(rowDefSavepointCreator)) {
-      throw new DataFormatException(
-          "The csv file used to create rows does not have the correct columns in the first row");
-    }
-
-    // Make sure that the first row of the csv file
-    // has the right columns
-    if (!firstLine[numOfCols - 3].equals(rowDefRowETag)
-        || !firstLine[numOfCols - 2].equals(rowDefFilterType)
-        || !firstLine[numOfCols - 1].equals(rowDefFilterValue)) {
-      throw new DataFormatException(
-          "The csv file used to create rows does not have the correct columns in the first row");
-    }
-
-    String[] line;
-
-    while ((line = reader.readNext()) != null) {
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      // kvm = new LinkedHashMap<String, String>();
-
-      for (int i = 6; i < numOfCols - 3; i++) {
-        // kvm.put(firstLine[i], line[i]);
-        DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]);
-        dkvl.add(dkv);
+    for (int i = 0; i < rowArrayList.size(); i++) {
+      Row row = rowArrayList.get(i);
+      Row rowObj = Row.forInsert(row.getRowId(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
+          row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+      
+      // Ensure that adequate defaults are set for all rows
+      if (rowObj.getRowId() == null || rowObj.getRowId().length() == 0) {
+        rowId = "uuid:" + UUID.randomUUID().toString();
+        rowObj.setRowId(rowId);
       }
+      
+      if (rowObj.getLocale() == null || rowObj.getLocale().length() == 0) {
+        rowObj.setLocale(locale);
+      }
+      
+      if (rowObj.getSavepointType() == null || rowObj.getSavepointType().length() == 0) {
+        rowObj.setSavepointType(savepointType);
+      }
+      
+      if (rowObj.getSavepointTimestamp() == null || rowObj.getSavepointTimestamp().length() == 0) {
+        savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+        rowObj.setSavepointTimestamp(savepointTimestamp);
+      }
+      
+      if (rowObj.getSavepointCreator() == null || rowObj.getSavepointCreator().length() == 0) {
+        rowObj.setSavepointCreator(savepointCreator);
+      }
+      
+      if (rowObj.getFilterScope() == null) {
+        rowObj.setFilterScope(defaultScope);
+      }
+      
+      processedRowArrayList.add(rowObj);
 
-      Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
+      if (processedRowArrayList.size() >= batchSize) {
+        tableRes = getTable(uri, appId, tableId);
+        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
 
-      JSONObject res = createOrUpdateRow(uri, appId, tableId, schemaETag, row);
-      System.out.println("createRowsUsingCSV: res is " + res.toString());
+        processedRowArrayList = new ArrayList<Row>();
+      }
+    }
+
+    if (processedRowArrayList.size() > 0) {
+      tableRes = getTable(uri, appId, tableId);
+      dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+      bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
     }
   }
-
- 
-//  public void createRowsUsingCSVBulkUpload(String uri, String appId, String tableId, String schemaETag, String csvFilePath, int batchSize) throws Exception 
-//  { 
-//    RFC4180CsvReader reader; 
-//    JSONObject rowObj = new JSONObject();
-//    JSONArray rowsObj = new JSONArray(); 
-//    String res = null;
-//    
-//    if (batchSize == 0) { batchSize = 500; }
-//    
-//    // No Row Id for bulk upload 
-//    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId + uriRefFragment + schemaETag + uriRowsFragment;
-//    
-//    File file = new File(csvFilePath); 
-//    if (!file.exists()) {
-//      System.out.println("createRowsUsingCSVBulkUpload: file " + csvFilePath + " does not exist"); 
-//    }
-//    
-//    InputStream in = new FileInputStream(file); 
-//    InputStreamReader inputStream = new InputStreamReader(in); 
-//    reader = new RFC4180CsvReader(inputStream);
-//    
-//    // Make sure that the first line of the csv file // has the right header
-//    String[] firstLine = reader.readNext(); 
-//    int numOfCols = firstLine.length;
-//    
-//    // Make sure that the first row of the csv file 
-//    // has the right columns 
-//    if (!firstLine[0].equals(rowDefId) || !firstLine[1].equals(rowDefFormId) ||
-//        !firstLine[2].equals(rowDefLocale) ||
-//        !firstLine[3].equals(rowDefSavepointType) ||
-//        !firstLine[4].equals(rowDefSavepointTimestamp) ||
-//        !firstLine[5].equals(rowDefSavepointCreator)) { 
-//      throw new DataFormatException("The csv file used to create rows does not have the correct columns in the first row"); 
-//    }
-//    
-//    // Make sure that the first row of the csv file 
-//    // has the right columns 
-//    if (!firstLine[numOfCols-3].equals(rowDefRowETag) ||
-//        !firstLine[numOfCols-2].equals(rowDefFilterType) ||
-//        !firstLine[numOfCols-1].equals(rowDefFilterValue)) { 
-//      throw new DataFormatException("The csv file used to create rows does not have the correct columns in the first row");
-//    }
-//    
-//    String[] line;
-//    
-//    //RestClient restClient = new RestClient(); 
-//    RestClient restClient;
-//    
-//    JSONObject rowResourceList = new JSONObject();
-//    
-//    while ((line = reader.readNext()) != null) { 
-//      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>(); 
-//      //kvm = new LinkedHashMap<String, String>();
-//    
-//      for (int i = 6; i < numOfCols-3; i++) { 
-//        //kvm.put(firstLine[i], line[i]);
-//        DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]); dkvl.add(dkv);
-//      }
-//    
-//      Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
-//    
-//      rowObj = this.mapRowToJSONObject(row);
-//    
-//      rowsObj.add(rowObj);
-//    
-//      if (rowsObj.size() >= batchSize) { 
-//        rowResourceList.put("rows", rowsObj);
-//    
-//        // After getting everything do the call to the bulk upload
-//        //System.out.println("createRowsUsingCSVBulkUpload: agg_uri is " + agg_uri); 
-//        restClient = new RestClient(); 
-//        Resource resource = restClient.resource(agg_uri);
-//    
-//        //System.out.println("createRowsUsingCSVBulkUpload: rowsObj is " + rowResourceList.toString());
-//    
-//        res = resource.accept("application/json").contentType("application/json").put(String.class, rowResourceList.toString());
-//    
-//        rowsObj = new JSONArray(); 
-//      } 
-//    }
-//    
-//    if (rowsObj.size() > 0) { 
-//      rowResourceList.put("rows", rowsObj);
-//    
-//      // After getting everything do the call to the bulk upload
-//      //System.out.println("createRowsUsingCSVBulkUpload: agg_uri is " + agg_uri); 
-//      restClient = new RestClient(); 
-//      Resource resource = restClient.resource(agg_uri);
-//    
-//      //System.out.println("createRowsUsingCSVBulkUpload: rowsObj is " + rowResourceList.toString());
-//    
-//      res = resource.accept("application/json").contentType("application/json").put(String.class, rowResourceList.toString()); 
-//    }
-//    
-//      //System.out.println("createRowsUsingCSVBulkUpload: result with tableId " + tableId + " is " + res);
-//  }
   
   /**
    * Creates rows in the table associated with
@@ -1863,6 +1703,8 @@ public class WinkClient {
     String savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     String savepointCreator = "anonymous";
     Scope defaultScope = Scope.EMPTY_SCOPE;
+    String dataETag = null;
+    JSONObject tableRes = null;
 
     if (batchSize == 0) {
       batchSize = 500;
@@ -1925,15 +1767,18 @@ public class WinkClient {
       rowArrayList.add(row);
 
       if (rowArrayList.size() >= batchSize) {
-        bulkRowsSender(rowArrayList, agg_uri, tableId, true);
+        tableRes = getTable(uri, appId, tableId);
+        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
 
         rowArrayList = new ArrayList<Row>();
       }
     }
 
     if (rowArrayList.size() > 0) {
-
-      bulkRowsSender(rowArrayList, agg_uri, tableId, true);
+      tableRes = getTable(uri, appId, tableId);
+      dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+      bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
     }
   }
    
@@ -2002,6 +1847,10 @@ public class WinkClient {
       String schemaETag, int batchSize, RFC4180CsvReader reader) throws IOException,
       DataFormatException, JsonProcessingException, UnsupportedEncodingException,
       ClientProtocolException {
+    
+    String dataETag = null;
+    JSONObject tableRes = null;
+    
     if (batchSize == 0) {
       batchSize = 500;
     }
@@ -2034,76 +1883,83 @@ public class WinkClient {
           "The csv file used to create rows does not have the correct columns in the first row");
     }
 
-    String[] line;
-    ArrayList<Row> rowArrayList = new ArrayList<Row>();
-    line = reader.readNext();
-    while (line != null) {
-
-      if (line.length == 0) {
-        line = reader.readNext();
-        continue;
-      }
-
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-
-      for (int i = 6; i < numOfCols - 3; i++) {
-        DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]);
-        dkvl.add(dkv);
-      }
-
-      Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
-      // System.out.println("row read: " + row.toString());
-
-      // String jsonRow = mapper.writeValueAsString(row);
-      // System.out.println("");
-      // System.out.println("object mapper outpput for row:        " + jsonRow);
-      // RowResource tempRow = new RowResource(row);
-      // String jsonTempRow = mapper.writeValueAsString(tempRow);
-      // System.out.println("object mapper output for rowResource:" +
-      // jsonTempRow);
-      // System.out.println("");
-
-      rowArrayList.add(row);
-      // System.out.println("rowResourceArrayList size is " +
-      // rowArrayList.size());
-      // rowObj = this.mapRowToJSONObject(row);
-      // rowsArray.add(rowObj);
-
-      if (rowArrayList.size() >= batchSize) {
-        // JSONObject rowResourceList = new JSONObject();
-        // rowResourceList.put("rows", rowsArray);
-
-        bulkRowsSender(rowArrayList, agg_uri, tableId, true);
-
-        // rowsArray = new JSONArray();
-        rowArrayList = new ArrayList<Row>();
-      }
+    try {
+      String[] line;
+      ArrayList<Row> rowArrayList = new ArrayList<Row>();
       line = reader.readNext();
-    }
-
-    if (rowArrayList.size() > 0) {
-      // JSONObject rowResourceList = new JSONObject();
-      // rowResourceList.put("rows", rowsArray);
-
-      bulkRowsSender(rowArrayList, agg_uri, tableId, true);
+      while (line != null) {
+  
+        if (line.length == 0) {
+          line = reader.readNext();
+          continue;
+        }
+  
+        ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+  
+        for (int i = 6; i < numOfCols - 3; i++) {
+          DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]);
+          dkvl.add(dkv);
+        }
+  
+        Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
+        // System.out.println("row read: " + row.toString());
+  
+        // String jsonRow = mapper.writeValueAsString(row);
+        // System.out.println("");
+        // System.out.println("object mapper outpput for row:        " + jsonRow);
+        // RowResource tempRow = new RowResource(row);
+        // String jsonTempRow = mapper.writeValueAsString(tempRow);
+        // System.out.println("object mapper output for rowResource:" +
+        // jsonTempRow);
+        // System.out.println("");
+  
+        rowArrayList.add(row);
+        // System.out.println("rowResourceArrayList size is " +
+        // rowArrayList.size());
+        // rowObj = this.mapRowToJSONObject(row);
+        // rowsArray.add(rowObj);
+  
+        if (rowArrayList.size() >= batchSize) {
+          tableRes = getTable(uri, appId, tableId);
+          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+  
+          rowArrayList = new ArrayList<Row>();
+        }
+        line = reader.readNext();
+      }
+  
+      if (rowArrayList.size() > 0) {
+        tableRes = getTable(uri, appId, tableId);
+        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
-  private void bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId,
+  private void bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId, String dataETag, 
       boolean print) throws JsonProcessingException, UnsupportedEncodingException, IOException,
       ClientProtocolException {
     System.out.println("Entering send");
     RowList rowList = new RowList();
     rowList.setRows(rowArrayList);
+    
+    if (dataETag != null && !dataETag.isEmpty()) {
+      rowList.setDataETag(dataETag);      
+    }
+
     DefaultHttpClient httpClient = new DefaultHttpClient();
     HttpPut request = new HttpPut(agg_uri);
 
     ObjectMapper mapper = new ObjectMapper();
     // StringEntity params = new StringEntity(rowResourceList.toString());
     String rowRes = mapper.writeValueAsString(rowList);
-    StringEntity params = new StringEntity(rowRes);
-    request.addHeader("content-type", "application/json");
+    StringEntity params = new StringEntity(rowRes, "UTF-8");
+    request.addHeader("content-type", "application/json; charset=utf-8");
     request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
     request.setEntity(params);
     System.out.println("agg_uri is " + agg_uri);
     System.out.println("Params for request: " + rowRes);
@@ -2123,35 +1979,151 @@ public class WinkClient {
     httpClient.close();
     System.out.println("Exiting send");
   }
-
+  
   /**
-   * Deletes a row in the table associated with
-   * the tableId and schemaETag given a rowId and
-   * rowETag. 
+   * Update row(s) in the table associated with
+   * the tableId and schemaETag using bulk upload
    * 
    * @param uri the url for the server
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
-   * @param rowId the unique identifier for a row
-   * @param rowETag identifies a certain instance of a row
+   * @param dataETag identifies the last change of the table
+   * @param rowArrayList an ArrayList of rows to create
+   * @param batchSize used to set the batch size of rows sent to the server - 
+   * if 0 is passed in, the default of 500 is used 
    */
-  public void deleteRow(String uri, String appId, String tableId, String schemaETag, String rowId,
-      String rowETag) {
+  public void updateRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize) {
+    String dataETag = null;
+    JSONObject tableRes = null;
+    // CAL: Not sure how to deal with the first pass
+    boolean first = true;
+    
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId + uriRowETagFragment
-        + rowETag;
-    System.out.println("createOrUpdateRow: agg_uri is " + agg_uri);
+        + uriRefFragment + schemaETag + uriRowsFragment;
+    System.out.println("deleteRowsUsingBulkUpload: agg_uri is " + agg_uri);
+    
+    if (batchSize == 0) {
+      batchSize = 500;
+    }
+    
+    try {
+      ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
-    RestClient restClient = new RestClient();
+      for (int i = 0; i < rowArrayList.size(); i++) {
+        Row row = rowArrayList.get(i);
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
+            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+        
+        processedRowArrayList.add(rowObj);
 
-    System.out.println("deleteRow: agg_uri is " + agg_uri);
-    Resource resource = restClient.resource(agg_uri);
+        if (processedRowArrayList.size() >= batchSize) {
+          tableRes = getTable(uri, appId, tableId);
+          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
 
-    ClientResponse response = resource.accept("application/json").delete();
-    System.out.println("deleteRow: client response is " + response.getMessage());
+          processedRowArrayList = new ArrayList<Row>();
+        }
+      }
+
+      if (processedRowArrayList.size() > 0) {
+        tableRes = getTable(uri, appId, tableId);
+        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+      }
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+  
+  /**
+   * Deletes row(s) in the table associated with
+   * the tableId and schemaETag using bulk upload
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param dataETag identifies the last change of the table
+   * @param rowArrayList an ArrayList of rows to create
+   * @param batchSize used to set the batch size of rows sent to the server - 
+   * if 0 is passed in, the default of 500 is used 
+   */
+  public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize) {
+    String dataETag = null;
+    JSONObject tableRes = null;
+    // CAL: Not sure how to deal with the first pass
+    boolean first = true;
+    
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriRowsFragment;
+    System.out.println("deleteRowsUsingBulkUpload: agg_uri is " + agg_uri);
+    
+    if (batchSize == 0) {
+      batchSize = 500;
+    }
+    
+    try {
+      ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
+
+      for (int i = 0; i < rowArrayList.size(); i++) {
+        Row row = rowArrayList.get(i);
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
+            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+        
+        // Make sure that all of these rows are marked for deletion
+        rowObj.setDeleted(true);
+        
+        processedRowArrayList.add(rowObj);
+
+        if (processedRowArrayList.size() >= batchSize) {
+          tableRes = getTable(uri, appId, tableId);
+          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+
+          processedRowArrayList = new ArrayList<Row>();
+        }
+      }
+
+      if (processedRowArrayList.size() > 0) {
+        tableRes = getTable(uri, appId, tableId);
+        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+      }
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
+//  /**
+//   * Deletes a row in the table associated with
+//   * the tableId and schemaETag given a rowId and
+//   * rowETag. 
+//   * 
+//   * @param uri the url for the server
+//   * @param appId identifies the application
+//   * @param tableId the table identifier or name
+//   * @param schemaETag identifies an instance of the table
+//   * @param rowId the unique identifier for a row
+//   * @param rowETag identifies a certain instance of a row
+//   */
+//  public void deleteRow(String uri, String appId, String tableId, String schemaETag, String rowId,
+//      String rowETag) {
+//    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+//        + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId + uriRowETagFragment
+//        + rowETag;
+//    System.out.println("deleteRow: agg_uri is " + agg_uri);
+//
+//    RestClient restClient = new RestClient();
+//
+//    System.out.println("deleteRow: agg_uri is " + agg_uri);
+//    Resource resource = restClient.resource(agg_uri);
+//
+//    ClientResponse response = resource.accept("application/json").delete();
+//    System.out.println("deleteRow: client response is " + response.getMessage());
+//  }
 
   /**
    * Get the file attachment and save it to 

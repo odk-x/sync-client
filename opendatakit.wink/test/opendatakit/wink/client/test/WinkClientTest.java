@@ -20,6 +20,7 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
+import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 import org.opendatakit.wink.client.WinkClient;
 
 public class WinkClientTest extends TestCase {
@@ -219,6 +220,52 @@ public class WinkClientTest extends TestCase {
     return same;
   }
   
+  public boolean checkThatRowHasId(String RowId, JSONObject rowRes) {
+    boolean same = false;
+
+    try {
+      if (RowId.equals(rowRes.getString("id"))) {
+        same = true;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return same;
+  }
+  
+  public boolean checkThatRowHasColValue(String colValue, JSONObject rowRes) {
+    boolean same = false;
+
+    try {
+      
+      if (rowRes.has(WinkClient.orderedColumnsDef)) {
+        JSONArray ordCols = rowRes.getJSONArray(WinkClient.orderedColumnsDef);
+        assertEquals(1, ordCols.size());
+        JSONObject col = ordCols.getJSONObject(0);
+        String recVal = col.getString("value");
+        if (recVal.equals(colValue)) {
+          same = true;
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return same;
+  }
+  
+  public boolean checkThatRowExists(String RowId, String colValue, JSONObject rowRes) {
+    boolean same = false;
+
+    try {
+      if (checkThatRowHasId(RowId, rowRes) && checkThatRowHasColValue(colValue, rowRes)) {
+        same = true;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return same;
+  }
+  
   public void deleteFolder(File folder) {
     File[] files = folder.listFiles();
     if (files!=null) { 
@@ -231,6 +278,31 @@ public class WinkClientTest extends TestCase {
       }
     }
     folder.delete();
+  }
+  
+  public boolean doesTableExistOnServer(String tableId, String schemaETag) {
+    boolean exists = false;
+
+    try {
+      WinkClient wc = new WinkClient();
+      JSONObject obj = wc.getTables(agg_url, appId);
+
+      JSONArray tables = obj.getJSONArray("tables");
+
+      for (int i = 0; i < tables.size(); i++) {
+        JSONObject table = tables.getJSONObject(i);
+        if (tableId.equals(table.getString("tableId"))) {
+          if (schemaETag.equals(table.getString("schemaETag"))) {
+            exists = true;
+          }
+        }
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    return exists;
   }
 
   /*
@@ -864,7 +936,7 @@ public class WinkClientTest extends TestCase {
    */
   public void testCreateTableWithString_ExpectPass() {
 
-    String testTableId = "test1";
+    String testTableId = "test0";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -911,7 +983,7 @@ public class WinkClientTest extends TestCase {
    */
   public void testCreateTableWhenUriIsNull_ExpectFail() {
 
-    String testTableId = "test2";
+    String testTableId = "test1";
     String testTableSchemaETag = "testCreateTableWhenUriIsNull_ExpectFail";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
@@ -965,55 +1037,10 @@ public class WinkClientTest extends TestCase {
   }
 
   /*
-   * test createTable when schemaETag is null
-   */
-  public void testCreateTableWhenSchemaETagIsNull_ExpectFail() {
-    String testTableId = "test6";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-      if (tableDef.containsKey("orderedColumns")) {
-        JSONArray cols = tableDef.getJSONArray("orderedColumns");
-        for (int i = 0; i < cols.size(); i++) {
-          JSONObject col = cols.getJSONObject(i);
-          String testElemKey = col.getString("elementKey");
-          assertEquals(colKey, testElemKey);
-        }
-      }
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testCreateTableWhenSchemaETagIsNull_ExpectFail: expected pass");
-    }
-  }
-
-  /*
    * test createTable when columns is null
    */
   public void testCreateTableWhenColumnsIsNull_ExpectFail() {
-    String testTableId = "test3";
+    String testTableId = "test2";
     String testTableSchemaETag = "testCreateTableWhenColumnsIsNull_ExpectFail";
     boolean thrown = false;
 
@@ -1034,7 +1061,7 @@ public class WinkClientTest extends TestCase {
    * test createTableWithCSV with valid data
    */
   public void testCreateTableWithCSVAndValidData_ExpectPass() {
-    String testTableId = "test4";
+    String testTableId = "test3";
     String tableSchemaETag = null;
     String csvFile = absolutePathOfTestFiles + "geoTaggerTest/definition.csv";
 
@@ -1065,47 +1092,6 @@ public class WinkClientTest extends TestCase {
           .fail("testCreateTableWithCSVAndValidData_ExpectPass: expected pass for creating table with CSV");
     }
 
-  }
-  
-  /*
-   * test createTableWithJSON with valid data
-   */
-  public void testCreateTableWithJSON_ExpectPass() {
-
-    String testTableId = "test22";
-    String tableSchemaETag = null;
-    String jsonString = "{\"orderedColumns\":[{\"elementKey\":\"Date_and_Time\",\"elementType\":\"dateTime\",\"elementName\":\"Date_and_Time\",\"listChildElementKeys\":\"[]\"}],\"tableId\":\"testDate\",\"schemaETag\":null}";
-    
-    try {
-      WinkClient wc = new WinkClient();
-
-      JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
-      System.out.println("testCreateTableWithJSON_ExpectPass: result is " + result);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      // Get the table definition
-      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
-        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
-        assertEquals(cols.size(), 1);
-        JSONObject col = cols.getJSONObject(cols.size() - 1);
-        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
-      }
-
-      // Now delete the table
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase
-          .fail("testCreateTableWithCSVAndValidData_ExpectPass: expected pass for creating table with CSV");
-    }
   }
   
   /*
@@ -1186,34 +1172,54 @@ public class WinkClientTest extends TestCase {
           .fail("testDeleteTableDefinitionWithValidValues_ExpectPass: expected pass deleting table defintion");
     }
   }
+  
+  /*
+   * test createTable when schemaETag is null
+   */
+  public void testCreateTableWhenSchemaETagIsNull_ExpectFail() {
+    String testTableId = "test6";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
 
-  public boolean doesTableExistOnServer(String tableId, String schemaETag) {
-    boolean exists = false;
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
 
     try {
       WinkClient wc = new WinkClient();
-      JSONObject obj = wc.getTables(agg_url, appId);
 
-      JSONArray tables = obj.getJSONArray("tables");
+      ArrayList<Column> columns = new ArrayList<Column>();
 
-      for (int i = 0; i < tables.size(); i++) {
-        JSONObject table = tables.getJSONObject(i);
-        if (tableId.equals(table.getString("tableId"))) {
-          if (schemaETag.equals(table.getString("schemaETag"))) {
-            exists = true;
-          }
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      if (tableDef.containsKey("orderedColumns")) {
+        JSONArray cols = tableDef.getJSONArray("orderedColumns");
+        for (int i = 0; i < cols.size(); i++) {
+          JSONObject col = cols.getJSONObject(i);
+          String testElemKey = col.getString("elementKey");
+          assertEquals(colKey, testElemKey);
         }
       }
 
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
     } catch (Exception e) {
       e.printStackTrace();
+      TestCase.fail("testCreateTableWhenSchemaETagIsNull_ExpectFail: expected pass");
     }
-
-    return exists;
   }
 
   public void testGetTablesWhenTableExists_ExpectPass() {
-    String testTableId = "test6";
+    String testTableId = "test7";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1261,7 +1267,7 @@ public class WinkClientTest extends TestCase {
   }
 
   public void testGetTableWhenTableExists_ExpectPass() {
-    String testTableId = "test7";
+    String testTableId = "test8";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1298,7 +1304,7 @@ public class WinkClientTest extends TestCase {
   }
 
   public void testWriteTableDefinitionToCSVWhenTableExists_ExpectPass() {
-    String testTableId = "test8";
+    String testTableId = "test9";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1337,7 +1343,7 @@ public class WinkClientTest extends TestCase {
   }
 
   public void testGetTableDefinitionWhenTableExists_ExpectPass() {
-    String testTableId = "test9";
+    String testTableId = "test10";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1378,56 +1384,12 @@ public class WinkClientTest extends TestCase {
     }
   }
 
-  public void testCreateOrUpdateRowWithValidData_ExpectPass() {
-    String testTableId = "test62";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-    // manufacture a rowId for this record...
-    String RowId = "uuid:" + UUID.randomUUID().toString();
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      dkvl.add(dkv);
-
-      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testCreateOrUpdateRowWithValidData_ExpectPass: expected pass");
-    }
-  }
-
   public void testGetRowWhenRowExists_ExpectPass() {
     String testTableId = "test11";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
+    String colValue = "/blah/blah/blah";
     // manufacture a rowId for this record...
     String RowId = "uuid:" + UUID.randomUUID().toString();
     String tableSchemaETag = null;
@@ -1448,19 +1410,19 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
       ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
 
       Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject createRes = wc
-          .createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      String rowETag = createRes.getString("rowETag");
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
 
       JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
 
-      assertEquals(rowETag, rowRes.getString("rowETag"));
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, rowRes));
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
@@ -1491,7 +1453,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      wc.createRowsUsingCSV(agg_url, appId, testTableId, tableSchemaETag, csvDataFile);
+      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       JSONObject res = wc.getRows(agg_url, appId, testTableId, tableSchemaETag, null, null);
       JSONArray rows = res.getJSONArray("rows");
@@ -1526,7 +1488,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      wc.createRowsUsingCSV(agg_url, appId, testTableId, tableSchemaETag, csvDataFile);
+      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       JSONObject res = wc.getRows(agg_url, appId, testTableId, tableSchemaETag, null, null);
       JSONArray rows = res.getJSONArray("rows");
@@ -1543,7 +1505,7 @@ public class WinkClientTest extends TestCase {
   }
 
   public void testGetRowsSinceWhenRowsExist_ExpectPass() {
-    String testTableId = "test13";
+    String testTableId = "test14";
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
@@ -1561,7 +1523,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      wc.createRowsUsingCSV(agg_url, appId, testTableId, tableSchemaETag, csvDataFile);
+      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
           null);
@@ -1577,44 +1539,9 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testGetRowsSinceWhenRowsExist_ExpectPass: expected pass");
     }
   }
-  
-  public void testWriteRowDataToCSVWhenNoRowsExist_ExpectPass() {
-    String testTableId = "test21";
-    String tableSchemaETag = null;
-
-    String relativeFileNameOnServer = "geotagger.shouldnotexist.csv";
-    String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
-    String csvOutputFile = absolutePathOfTestFiles + "geotaggerTest/" + relativeFileNameOnServer;
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
-      System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result of create table is " + result);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvOutputFile);
-      
-      File csvOutFile = new File(csvOutputFile);
-      
-      assertFalse(csvOutFile.exists());
-
-      // Now delete the table
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testWriteRowDataToCSVWhenRowsExist_ExpectPass: expected pass");
-    }
-  }
 
   public void testWriteRowDataToCSVWhenRowsExist_ExpectPass() {
-    String testTableId = "test14";
+    String testTableId = "test15";
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
@@ -1633,7 +1560,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      wc.createRowsUsingCSV(agg_url, appId, testTableId, tableSchemaETag, csvDataFile);
+      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvOutputFile);
 
@@ -1646,8 +1573,337 @@ public class WinkClientTest extends TestCase {
     }
   }
   
-  public void testWriteRowDataToCSVWithLotsOfRows_ExpectPass() {
+  public void testDeleteRowWhenRowExists_ExpectPass() {
+    String testTableId = "test16";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowArrayList = new ArrayList<Row>();
+      rowArrayList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowArrayList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      
+      String dataETag = res.getString("dataETag");
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Now delete the row
+      // wc.deleteRow(agg_url, appId, testTableId, tableSchemaETag, RowId, res.getString("rowETag"));
+      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString("rowETag"), row.getFormId(), row.getLocale(), row.getSavepointType(), 
+          row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+      
+      // Make sure that all of these rows are marked for deletion
+      rowObj.setDeleted(true);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(rowObj);
+      wc.deleteRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, dataETag, rowList, 0);
+
+      // Check that the row was deleted
+      JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+      assertTrue(rowRes.getBoolean("deleted"));
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
+    }
+  }
+
+  /*
+   * Test getting the manifest for app level files with valid files
+   */
+  public void testGetManifestForTableIdWhenTableFileExists_ExpectPass() {
+    String testTableId = "test17";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    // manufacture a rowId for this record... String RowId = "uuid:" +
+    UUID.randomUUID().toString();
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      // Add a file for table
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetManifestForTableIdWhenTableFileExists_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testGetManifestForRowWithNoFiles_ExpectPass() {
+    String testTableId = "test18";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Get the manifest to check that the file is there
+      JSONObject obj = wc.getManifestForRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+
+      // Make sure there are no files returned
+      JSONArray files = obj.getJSONArray("files");
+      int numOfFiles = files.size();
+      
+      assertEquals(numOfFiles, 0);
+
+      // Delete the table and all data
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetManifestForRowWithNoFiles_ExpectPass: expected pass");
+    }
+  }
+
+  public void testPutFileForRowWithValidBinaryFile_ExpectPass() {
+    String testTableId = "test19";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    boolean foundFile = false;
+    String relativePathOnServer = "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
+    String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Put file for row
+      wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile,
+          relativePathOnServer);
+
+      // Make sure that the file is on the server foundFile =
+      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
+
+      assertTrue(foundFile);
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testPutFileForRowWithValidBinaryFile_ExpectPass: expected pass");
+    }
+  }
+
+  public void testGetFileForRowWithValidBinaryFile_ExpectPass() {
     String testTableId = "test20";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    boolean foundFile = false;
+    String relativePathOnServer = "spaceNeedle_CCLicense_goCardUSA.jpg";
+    String wholePathToFile = absolutePathOfTestFiles + "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
+    String pathToSaveFile = absolutePathOfTestFiles + "downloadInstance/" + relativePathOnServer;
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Put file for row
+      wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile, relativePathOnServer);
+
+      // Make sure that the file is on the server
+      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
+
+      assertTrue(foundFile);
+
+      // Now get the file
+      wc.getFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, false, pathToSaveFile, relativePathOnServer);
+
+      boolean sameFile = checkThatTwoFilesAreTheSame(wholePathToFile, pathToSaveFile);
+
+      assertTrue(sameFile);
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetFileForRowWithValidBinaryFile_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testWriteRowDataToCSVWithLotsOfRows_ExpectPass() {
+    String testTableId = "test21";
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "cookstoves/data_definition.csv";
@@ -1690,26 +1946,20 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: expected pass");
     }
   }
-
-  public void testDeleteRowWhenRowExists_ExpectPass() {
-    String testTableId = "test15";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
+  
+  public void testWriteRowDataToCSVWhenNoRowsExist_ExpectPass() {
+    String testTableId = "test22";
     String tableSchemaETag = null;
-    String listOfChildElements = "[]";
 
-    // manufacture a rowId for this record...
-    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String relativeFileNameOnServer = "geotagger.shouldnotexist.csv";
+    String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
+    String csvOutputFile = absolutePathOfTestFiles + "geotaggerTest/" + relativeFileNameOnServer;
 
     try {
       WinkClient wc = new WinkClient();
 
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
+      System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result of create table is " + result);
 
       if (result.containsKey("tableId")) {
         String tableId = result.getString("tableId");
@@ -1717,93 +1967,35 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      dkvl.add(dkv);
+      wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvOutputFile);
+      
+      File csvOutFile = new File(csvOutputFile);
+      
+      assertFalse(csvOutFile.exists());
 
-      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));
-
-      // Now delete the row
-      wc.deleteRow(agg_url, appId, testTableId, tableSchemaETag, RowId, res.getString("rowETag"));
-
-      // Check that the row was deleted
-      JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
-      assertTrue(rowRes.getBoolean("deleted"));
-
+      // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
 
     } catch (Exception e) {
       e.printStackTrace();
-      TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
-    }
-  }
-
-  /*
-   * Test getting the manifest for app level files with valid files
-   */
-  public void testGetManifestForTableIdWhenTableFileExists_ExpectPass() {
-    String testTableId = "test16";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    // manufacture a rowId for this record... String RowId = "uuid:" +
-    UUID.randomUUID().toString();
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      // Add a file for table
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testGetManifestForTableIdWhenTableFileExists_ExpectPass: expected pass");
+      TestCase.fail("testWriteRowDataToCSVWhenRowsExist_ExpectPass: expected pass");
     }
   }
   
-  public void testGetManifestForRowWithNoFiles_ExpectPass() {
-    String testTableId = "test17";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
+  /*
+   * test createTableWithJSON with valid data
+   */
+  public void testCreateTableWithJSON_ExpectPass() {
+
+    String testTableId = "test23";
+    String tableSchemaETag = null;
+    String jsonString = "{\"orderedColumns\":[{\"elementKey\":\"Date_and_Time\",\"elementType\":\"dateTime\",\"elementName\":\"Date_and_Time\",\"listChildElementKeys\":\"[]\"}],\"tableId\":\"testDate\",\"schemaETag\":null}";
     
-    // manufacture a rowId for this record...
-    String RowId = "uuid:" + UUID.randomUUID().toString();
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
     try {
       WinkClient wc = new WinkClient();
 
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+      JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
+      System.out.println("testCreateTableWithJSON_ExpectPass: result is " + result);
 
       if (result.containsKey("tableId")) {
         String tableId = result.getString("tableId");
@@ -1811,244 +2003,28 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      dkvl.add(dkv);
+      // Get the table definition
+      JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
-      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
+        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
+        assertEquals(cols.size(), 1);
+        JSONObject col = cols.getJSONObject(cols.size() - 1);
+        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
+      }
 
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));;
-
-      // Get the manifest to check that the file is there
-      JSONObject obj = wc.getManifestForRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
-
-      // Make sure there are no files returned
-      JSONArray files = obj.getJSONArray("files");
-      int numOfFiles = files.size();
-      
-      assertEquals(numOfFiles, 0);
-
-      // Delete the table and all data
+      // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
 
     } catch (Exception e) {
       e.printStackTrace();
-      TestCase.fail("testGetManifestForRowWithNoFiles_ExpectPass: expected pass");
-    }
-  }
-
-  public void testPutFileForRowWithValidBinaryFile_ExpectPass() {
-    String testTableId = "test18";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-    
-    // manufacture a rowId for this record...
-    String RowId = "uuid:" + UUID.randomUUID().toString();
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    boolean foundFile = false;
-    String relativePathOnServer = "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
-    String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      dkvl.add(dkv);
-
-      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));
-
-      // Put file for row
-      wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile,
-          relativePathOnServer);
-
-      // Make sure that the file is on the server foundFile =
-      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
-
-      assertTrue(foundFile);
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testPutFileForRowWithValidBinaryFile_ExpectPass: expected pass");
-    }
-  }
-
-  public void testGetFileForRowWithValidBinaryFile_ExpectPass() {
-    String testTableId = "test19";
-    String colName = "scan_output_directory";
-    String colKey = "scan_output_directory";
-    String colType = "string";
-
-    // manufacture a rowId for this record...
-    String RowId = "uuid:" + UUID.randomUUID().toString();
-    String tableSchemaETag = null;
-    String listOfChildElements = "[]";
-
-    boolean foundFile = false;
-    String relativePathOnServer = "spaceNeedle_CCLicense_goCardUSA.jpg";
-    String wholePathToFile = absolutePathOfTestFiles + "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
-    String pathToSaveFile = absolutePathOfTestFiles + "downloadInstance/" + relativePathOnServer;
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      ArrayList<Column> columns = new ArrayList<Column>();
-
-      columns.add(new Column(colKey, colName, colType, listOfChildElements));
-
-      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-
-      DataKeyValue dkv = new DataKeyValue("scan_output_directory", "/blah/blah/blah");
-      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-      dkvl.add(dkv);
-
-      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));
-
-      // Put file for row
-      wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile, relativePathOnServer);
-
-      // Make sure that the file is on the server
-      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
-
-      assertTrue(foundFile);
-
-      // Now get the file
-      wc.getFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, false, pathToSaveFile, relativePathOnServer);
-
-      boolean sameFile = this.checkThatTwoFilesAreTheSame(wholePathToFile, pathToSaveFile);
-
-      assertTrue(sameFile);
-
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testGetFileForRowWithValidBinaryFile_ExpectPass: expected pass");
-    }
-  }
-
-  public void testPushAllDataToUri_ExpectPass() {
-    String dirToGetDataFrom = absolutePathOfTestFiles + "dataToUpload";
-    String dirToPushDataFrom = absolutePathOfTestFiles + "downloadedData";
-    String tableSchemaETag = null;
-    String testTableId = "geotagger";
-    ArrayList<String> filesUploaded;
-    ArrayList<String> filesDownloaded;
-    ArrayList<String> cleanFilesUploaded = new ArrayList<String>();
-    ArrayList<String> cleanFilesDownloaded = new ArrayList<String>();
-    String dsStore = ".DS_Store";
-
-    try {
-      WinkClient wc = new WinkClient();
-
-      wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom);
-      File fileDirToGetDataFrom = new File(dirToGetDataFrom);
-      filesUploaded = wc.recurseDir(fileDirToGetDataFrom);
-
-      File fileDirToPushDataFrom = new File(dirToPushDataFrom);
-      deleteFolder(fileDirToPushDataFrom);
-      wc.getAllDataFromUri(agg_url, appId, dirToPushDataFrom);
-      filesDownloaded = wc.recurseDir(fileDirToPushDataFrom);
-      
-      // Remove any .DS_Store files
-      for (int i = 0; i < filesDownloaded.size(); i++) {
-        File tempFile = new File(filesDownloaded.get(i));
-        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
-        if (!fileName.equals(dsStore)) {
-          cleanFilesDownloaded.add(filesDownloaded.get(i));
-        }
-      }
-      
-      // Remove any .DS_Store files
-      for (int i = 0; i < filesUploaded.size(); i++) {
-        File tempFile = new File(filesUploaded.get(i));
-        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
-        if (!fileName.equals(dsStore)) {
-          cleanFilesUploaded.add(filesUploaded.get(i));
-        }
-      }
-      
-      assertEquals(cleanFilesDownloaded.size(), cleanFilesUploaded.size());
-      
-      // Delete the geotagger table defintion
-      JSONObject result = wc.getTable(agg_url, appId, testTableId);
-
-      if (result.containsKey("schemaETag")) {
-        tableSchemaETag = result.getString("schemaETag");
-      }
-      
-      // Delete geoTagger from the server
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-      
-      // Make sure the table is gone
-      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
-      
-      // Clean up all the files after 
-      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
-      JSONArray files = obj.getJSONArray("files");
-
-      for (int i = 0; i < files.size(); i++) {
-        JSONObject file = files.getJSONObject(i);
-        String fileName = file.getString("filename");
-        
-        // After we are done clean up the file
-        wc.deleteFile(agg_url, appId, fileName);
-      }
-      
-      // Make sure that all app level files are gone 
-      obj = wc.getManifestForAppLevelFiles(agg_url, appId);
-      files = obj.getJSONArray("files");
-      
-      assertEquals(files.size(), 0);
-      
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testPushAllDataToUri_ExpectPass: expected pass");
+      TestCase
+          .fail("testCreateTableWithCSVAndValidData_ExpectPass: expected pass for creating table with CSV");
     }
   }
   
   public void testCreateRowsUsingJSONBulkUpload_ExpectPass() {
-    String testTableId = "test23";
+    String testTableId = "test24";
     String tableSchemaETag = null;
     String jsonString = "{\"orderedColumns\":[{\"elementKey\":\"Date_and_Time\",\"elementType\":\"dateTime\",\"elementName\":\"Date_and_Time\",\"listChildElementKeys\":\"[]\"}],\"tableId\":\"testDate\",\"schemaETag\":null}";
     JSONObject rowsWrapper = new JSONObject();
@@ -2122,7 +2098,7 @@ public class WinkClientTest extends TestCase {
    */
   public void testGetSchemaETagForTable_ExpectPass() {
 
-    String testTableId = "test24";
+    String testTableId = "test25";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -2146,7 +2122,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
       
-      String eTag = wc.getSchemaETagForTable(agg_url, appId, testTableId);
+      String eTag = WinkClient.getSchemaETagForTable(agg_url, appId, testTableId);
       
       assertEquals(tableSchemaETag, eTag);
 
@@ -2169,11 +2145,11 @@ public class WinkClientTest extends TestCase {
   }
   
   /*
-   * test create row with UTF-8
+   * test create row bulk upload with UTF-8
    */
-  public void testCreateOrUpdateRowWithUTF8_ExpectPass() {
+  public void testCreateRowsUsingBulkUploadWithUTF8_ExpectPass() {
 
-    String testTableId = "test25";
+    String testTableId = "test26";
     String colName = "utf_test_col";
     String colKey = "utf_test_col";
     String colType = "string";
@@ -2216,19 +2192,19 @@ public class WinkClientTest extends TestCase {
       dkvl.add(dkv);
 
       Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-      JSONObject res = wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
-
-      // Now check that the row was created with the right rowId
-      assertEquals(RowId, res.getString("id"));
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
       
-      if (res.has(WinkClient.orderedColumnsDef)) {
-        JSONArray ordCols = res.getJSONArray(WinkClient.orderedColumnsDef);
-        assertEquals(1, ordCols.size());
-        JSONObject col = ordCols.getJSONObject(0);
-        String recVal = col.getString("value");
-        assertEquals(recVal, utf_val);
-        assertEquals(recVal.equals(utf_val), true);
-      }
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, utf_val, jsonRow));
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
@@ -2242,7 +2218,7 @@ public class WinkClientTest extends TestCase {
    * test query in time range with last update date 
    */
   public void testQueryRowsInTimeRangeWithLastUpdateDate_ExpectPass() {
-    String testTableId = "test26";
+    String testTableId = "test27";
     String colName = "seq_num";
     String colKey = "seq_num";
     String colType = "string";
@@ -2270,14 +2246,17 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
+      ArrayList<Row> rowList = new ArrayList<Row>();
       for (int i = 0; i < sizeOfSeqTable; i++) {
         DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
         ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
         dkvl.add(dkv);
         String RowId = "uuid:" + UUID.randomUUID().toString();
         Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-        wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+        rowList.add(row);
       }
+
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 0);
 
       JSONObject res = wc.queryRowsInTimeRangeWithLastUpdateDate(agg_url, appId, testTableId, tableSchemaETag, startTime, null, null, null);
       
@@ -2299,7 +2278,7 @@ public class WinkClientTest extends TestCase {
    * test query in time range with savepointTimestamp date 
    */
   public void testQueryRowsInTimeRangeWithSavepointTimestamp_ExpectPass() {
-    String testTableId = "test27";
+    String testTableId = "test28";
     String colName = "seq_num";
     String colKey = "seq_num";
     String colType = "string";
@@ -2327,14 +2306,17 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
 
+      ArrayList<Row> rowList = new ArrayList<Row>();
       for (int i = 0; i < sizeOfSeqTable; i++) {
         DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
         ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
         dkvl.add(dkv);
         String RowId = "uuid:" + UUID.randomUUID().toString();
         Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
-        wc.createOrUpdateRow(agg_url, appId, testTableId, tableSchemaETag, row);
+        rowList.add(row);
       }
+
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 0);
 
       JSONObject res = wc.queryRowsInTimeRangeWithSavepointTimestamp(agg_url, appId, testTableId, tableSchemaETag, startTime, null, null, null);
       
@@ -2349,6 +2331,81 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testQueryRowsInTimeRangeWithSavepointTimestamp_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testUpdateRowWhenRowExists_ExpectPass() {
+    String testTableId = "test29";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    String colValue2 = "/whatever/whatever";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+
+      Row row = Row.forInsert(RowId, null, null, null, null, null, Scope.EMPTY_SCOPE, dkvl);
+      ArrayList<Row> rowArrayList = new ArrayList<Row>();
+      rowArrayList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowArrayList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      
+      String dataETag = res.getString("dataETag");
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Now update the row
+      dkv = new DataKeyValue("scan_output_directory", colValue2);
+      dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.jsonRowETag), row.getFormId(), jsonRow.getString(WinkClient.jsonLocale), jsonRow.getString(WinkClient.jsonSavepointType), 
+          jsonRow.getString(WinkClient.jsonSavepointTimestamp), jsonRow.getString(WinkClient.jsonSavepointCreator), row.getFilterScope(), dkvl);
+      
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(rowObj);
+      wc.updateRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, dataETag, rowList, 0);
+
+      // Check that the row was deleted
+      JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+      assertTrue(checkThatRowHasColValue(colValue2, rowRes));
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
     }
   }
 
@@ -2482,6 +2539,143 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testCreateRowsUsingCSVInputStreamBulkUploadWithLotsOfData_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testCreateRowsUsingBulkUploadWithValidData_ExpectPass() {
+    String testTableId = "test62";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testCreateOrUpdateRowWithValidData_ExpectPass: expected pass");
+    }
+  }
+  
+
+  public void testPushAllDataToUri_ExpectPass() {
+    String dirToGetDataFrom = absolutePathOfTestFiles + "dataToUpload";
+    String dirToPushDataFrom = absolutePathOfTestFiles + "downloadedData";
+    String tableSchemaETag = null;
+    String testTableId = "geotagger";
+    ArrayList<String> filesUploaded;
+    ArrayList<String> filesDownloaded;
+    ArrayList<String> cleanFilesUploaded = new ArrayList<String>();
+    ArrayList<String> cleanFilesDownloaded = new ArrayList<String>();
+    String dsStore = ".DS_Store";
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom);
+      File fileDirToGetDataFrom = new File(dirToGetDataFrom);
+      filesUploaded = wc.recurseDir(fileDirToGetDataFrom);
+
+      File fileDirToPushDataFrom = new File(dirToPushDataFrom);
+      deleteFolder(fileDirToPushDataFrom);
+      wc.getAllDataFromUri(agg_url, appId, dirToPushDataFrom);
+      filesDownloaded = wc.recurseDir(fileDirToPushDataFrom);
+      
+      // Remove any .DS_Store files
+      for (int i = 0; i < filesDownloaded.size(); i++) {
+        File tempFile = new File(filesDownloaded.get(i));
+        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
+        if (!fileName.equals(dsStore)) {
+          cleanFilesDownloaded.add(filesDownloaded.get(i));
+        }
+      }
+      
+      // Remove any .DS_Store files
+      for (int i = 0; i < filesUploaded.size(); i++) {
+        File tempFile = new File(filesUploaded.get(i));
+        String fileName = tempFile.getAbsolutePath().substring(tempFile.getAbsolutePath().lastIndexOf("/")+1);
+        if (!fileName.equals(dsStore)) {
+          cleanFilesUploaded.add(filesUploaded.get(i));
+        }
+      }
+      
+      assertEquals(cleanFilesDownloaded.size(), cleanFilesUploaded.size());
+      
+      // Delete the geotagger table defintion
+      JSONObject result = wc.getTable(agg_url, appId, testTableId);
+
+      if (result.containsKey("schemaETag")) {
+        tableSchemaETag = result.getString("schemaETag");
+      }
+      
+      // Delete geoTagger from the server
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      // Make sure the table is gone
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      // Clean up all the files after 
+      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      JSONArray files = obj.getJSONArray("files");
+
+      for (int i = 0; i < files.size(); i++) {
+        JSONObject file = files.getJSONObject(i);
+        String fileName = file.getString("filename");
+        
+        // After we are done clean up the file
+        wc.deleteFile(agg_url, appId, fileName);
+      }
+      
+      // Make sure that all app level files are gone 
+      obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      files = obj.getJSONArray("files");
+      
+      assertEquals(files.size(), 0);
+      
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testPushAllDataToUri_ExpectPass: expected pass");
     }
   }
 }
