@@ -20,6 +20,9 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
+import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
+import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome.OutcomeType;
+import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
 import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 import org.opendatakit.wink.client.WinkClient;
 
@@ -2395,9 +2398,92 @@ public class WinkClientTest extends TestCase {
       rowList.add(rowObj);
       wc.updateRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, dataETag, rowList, 0);
 
-      // Check that the row was deleted
+      // Check that the row was updated
       JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
       assertTrue(checkThatRowHasColValue(colValue2, rowRes));
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testAlterRowsUsingSingleBatchWithValidData_ExpectPass() {
+    String testTableId = "test30";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    String colValue2 = "/whatever/whatever";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+
+    try {
+      WinkClient wc = new WinkClient();
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+
+      Row row = Row.forInsert(RowId, null, null, null, null, null, Scope.EMPTY_SCOPE, dkvl);
+      ArrayList<Row> rowArrayList = new ArrayList<Row>();
+      rowArrayList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowArrayList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      
+      String dataETag = res.getString("dataETag");
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Now update the row
+      dkv = new DataKeyValue("scan_output_directory", colValue2);
+      dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.jsonRowETag), row.getFormId(), jsonRow.getString(WinkClient.jsonLocale), jsonRow.getString(WinkClient.jsonSavepointType), 
+          jsonRow.getString(WinkClient.jsonSavepointTimestamp), jsonRow.getString(WinkClient.jsonSavepointCreator), row.getFilterScope(), dkvl);
+      
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(rowObj);
+      RowOutcomeList outcomeList = wc.alterRowsUsingSingleBatch(agg_url, appId, testTableId, tableSchemaETag, dataETag, rowList);
+      
+      ArrayList<RowOutcome> resultingRowOutcomeList = outcomeList.getRows();
+      RowOutcome rowOutcome = resultingRowOutcomeList.get(0);
+      
+      // Check that the row was updated
+      assertEquals(resultingRowOutcomeList.size(), 1);
+
+      assertEquals(rowOutcome.getOutcome(), OutcomeType.SUCCESS);
+      
+      // Check that the row was updated
+      JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+      assertTrue(checkThatRowExists(RowId, colValue2, rowRes));
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
@@ -2596,7 +2682,6 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testCreateOrUpdateRowWithValidData_ExpectPass: expected pass");
     }
   }
-  
 
   public void testPushAllDataToUri_ExpectPass() {
     String dirToGetDataFrom = absolutePathOfTestFiles + "dataToUpload";

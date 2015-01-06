@@ -17,11 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.zip.DataFormatException;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.wink.client.ClientResponse;
 import org.apache.wink.client.Resource;
 import org.apache.wink.client.RestClient;
@@ -35,8 +31,8 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
-import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
+import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
 import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -122,6 +118,8 @@ public class WinkClient {
 
   public static String jsonRowETag = "rowETag";
 
+  public static String jsonRowsString = "rows";
+  
   public static String jsonFilterScope = "filterScope";
   
   public static String jsonTableId = "tableId";
@@ -398,7 +396,7 @@ public class WinkClient {
        do {
          // Get all of the rowId's for the table
          obj = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
-         JSONArray rows = obj.getJSONArray("rows");
+         JSONArray rows = obj.getJSONArray(jsonRowsString);
          for (int k = 0; k < rows.size(); k++) {
            JSONObject row = rows.getJSONObject(k);
            String rowId = row.getString("id");
@@ -463,7 +461,7 @@ public class WinkClient {
     do {
       row = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
       //JSONObject row = getRows(uri, appId, tableId, schemaETag, null, defaultFetchLimit);
-      JSONArray tableRows = row.getJSONArray("rows");
+      JSONArray tableRows = row.getJSONArray(jsonRowsString);
 
       for (int i = 0; i < tableRows.size(); i++) {
         JSONObject tableRow = tableRows.getJSONObject(i);
@@ -484,7 +482,7 @@ public class WinkClient {
           JSONObject rowFile = rowFiles.getJSONObject(j);
           String fileName = rowFile.getString("filename");
 
-          // CAL: hack to get Aggregate to work
+          // Convert rowId for Aggregate
           String rowIdForSave = convertRowIdForInstances(rowId);
           String pathToSaveFile = dirToSaveDataTo + separator + "tables" + separator + tableId
             + separator + "instances" + separator + rowIdForSave + separator + fileName;
@@ -779,6 +777,27 @@ public class WinkClient {
     System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
 
     return obj;
+  }
+  
+  /**
+   * Returns table data eTag for the specified tableId
+   * in a JSONObject
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @return a JSONObject with the representation of the table
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public String getTableDataETag(String uri, String appId, String tableId) throws Exception {
+    String dataETag = null;
+    
+    JSONObject tableRes = getTable(uri, appId, tableId);
+    dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+
+    System.out.println("getTableDataETag: result is for tableId " + tableId + " is " + dataETag);
+
+    return dataETag;
   }
 
   /**
@@ -1232,11 +1251,11 @@ public class WinkClient {
     }
 
     Resource tableResource = restClient.resource(agg_uri);
-    System.out.println("getRows: agg uri is " + agg_uri);
+    System.out.println("getRowsSince: agg uri is " + agg_uri);
 
     String tableRes = tableResource.accept("application/json").get(String.class);
     obj = new JSONObject(tableRes);
-    System.out.println("getRows: result for " + tableId + " is " + obj.toString());
+    System.out.println("getRowsSince: result for " + tableId + " is " + obj.toString());
 
     return obj;
   }
@@ -1317,14 +1336,13 @@ public class WinkClient {
   public void writeRowDataToCSV(String uri, String appId, String tableId, String schemaETag,
       String csvFilePath) throws Exception {
 	  
-	// CAL: May need to come up with a more generic way of dealing with nulls!!
     RFC4180CsvWriter writer;
     JSONObject rowWrapper;
     String resumeCursor = null;
 
     rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
 
-    JSONArray rows = rowWrapper.getJSONArray("rows");
+    JSONArray rows = rowWrapper.getJSONArray(jsonRowsString);
     
     if (rows.size() <= 0) {
     	System.out.println("writeRowDataToCSV: There are no rows to write out!");
@@ -1369,7 +1387,7 @@ public class WinkClient {
     do {
       rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
 
-      rows = rowWrapper.getJSONArray("rows");
+      rows = rowWrapper.getJSONArray(jsonRowsString);
       
       writeOutFetchLimitRows(writer, rows, colArray);
       
@@ -1615,7 +1633,6 @@ public class WinkClient {
     String savepointCreator = "anonymous";
     Scope defaultScope = Scope.EMPTY_SCOPE;
     String dataETag = null;
-    JSONObject tableRes = null;
 
     if (batchSize == 0) {
       batchSize = 500;
@@ -1662,8 +1679,7 @@ public class WinkClient {
       processedRowArrayList.add(rowObj);
 
       if (processedRowArrayList.size() >= batchSize) {
-        tableRes = getTable(uri, appId, tableId);
-        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
 
         processedRowArrayList = new ArrayList<Row>();
@@ -1671,8 +1687,7 @@ public class WinkClient {
     }
 
     if (processedRowArrayList.size() > 0) {
-      tableRes = getTable(uri, appId, tableId);
-      dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+      dataETag = getTableDataETag(uri, appId, tableId);
       bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
     }
   }
@@ -1704,14 +1719,13 @@ public class WinkClient {
     String savepointCreator = "anonymous";
     Scope defaultScope = Scope.EMPTY_SCOPE;
     String dataETag = null;
-    JSONObject tableRes = null;
 
     if (batchSize == 0) {
       batchSize = 500;
     }
 
     JSONObject rowWrapperObj = new JSONObject(jsonRows);
-    JSONArray rowsObj = rowWrapperObj.getJSONArray("rows");
+    JSONArray rowsObj = rowWrapperObj.getJSONArray(jsonRowsString);
     JSONObject rowObj = null;
     
     // No Row Id for bulk upload
@@ -1767,8 +1781,7 @@ public class WinkClient {
       rowArrayList.add(row);
 
       if (rowArrayList.size() >= batchSize) {
-        tableRes = getTable(uri, appId, tableId);
-        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
 
         rowArrayList = new ArrayList<Row>();
@@ -1776,8 +1789,7 @@ public class WinkClient {
     }
 
     if (rowArrayList.size() > 0) {
-      tableRes = getTable(uri, appId, tableId);
-      dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+      dataETag = getTableDataETag(uri, appId, tableId);
       bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
     }
   }
@@ -1849,7 +1861,6 @@ public class WinkClient {
       ClientProtocolException {
     
     String dataETag = null;
-    JSONObject tableRes = null;
     
     if (batchSize == 0) {
       batchSize = 500;
@@ -1920,8 +1931,7 @@ public class WinkClient {
         // rowsArray.add(rowObj);
   
         if (rowArrayList.size() >= batchSize) {
-          tableRes = getTable(uri, appId, tableId);
-          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          dataETag = getTableDataETag(uri, appId, tableId);
           bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
   
           rowArrayList = new ArrayList<Row>();
@@ -1930,54 +1940,48 @@ public class WinkClient {
       }
   
       if (rowArrayList.size() > 0) {
-        tableRes = getTable(uri, appId, tableId);
-        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
       }
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
-
-  private void bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId, String dataETag, 
+  
+  private RowOutcomeList bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId, String dataETag, 
       boolean print) throws JsonProcessingException, UnsupportedEncodingException, IOException,
-      ClientProtocolException {
+      ClientProtocolException, JSONException {
     System.out.println("Entering send");
     RowList rowList = new RowList();
+    RowOutcomeList outcome = null;
     rowList.setRows(rowArrayList);
     
     if (dataETag != null && !dataETag.isEmpty()) {
       rowList.setDataETag(dataETag);      
     }
-
-    DefaultHttpClient httpClient = new DefaultHttpClient();
-    HttpPut request = new HttpPut(agg_uri);
-
+    
     ObjectMapper mapper = new ObjectMapper();
-    // StringEntity params = new StringEntity(rowResourceList.toString());
     String rowRes = mapper.writeValueAsString(rowList);
-    StringEntity params = new StringEntity(rowRes, "UTF-8");
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.setEntity(params);
+    
     System.out.println("agg_uri is " + agg_uri);
     System.out.println("Params for request: " + rowRes);
-    HttpResponse response = httpClient.execute(request);
+    
+    RestClient restClient = new RestClient();
+    Resource resource = restClient.resource(agg_uri);
+    String res = resource.accept("application/json").contentType("application/json")
+        .put(String.class, rowRes);
+
+    System.out.println("bulkRowsSender: result is for tableId " + tableId + " is " + res);
+    
     if (print) {
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-      System.out.println("createRowsUsingCSVBulkUpload: result with tableId " + tableId + " is "
+      System.out.println("bulkRowsSender: result with tableId " + tableId + " is "
           + res);
     }
-    httpClient.close();
     System.out.println("Exiting send");
+
+    outcome = mapper.readValue(res, RowOutcomeList.class);
+    
+    return outcome;
   }
   
   /**
@@ -1988,20 +1992,24 @@ public class WinkClient {
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
-   * @param dataETag identifies the last change of the table
+   * @param dataETagVal identifies the last change of the table
    * @param rowArrayList an ArrayList of rows to create
    * @param batchSize used to set the batch size of rows sent to the server - 
    * if 0 is passed in, the default of 500 is used 
+   * @throws Exception any exception encountered is thrown to the caller
    */
-  public void updateRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize) {
-    String dataETag = null;
-    JSONObject tableRes = null;
-    // CAL: Not sure how to deal with the first pass
-    boolean first = true;
+  public void updateRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
+      ArrayList<Row> rowArrayList, int batchSize) throws Exception{
+    String dataETag = getTableDataETag(uri, appId, tableId);
+
+    // Check that the dataETag is valid before beginning
+    if (!dataETag.equals(dataETagVal)) {
+      throw new IllegalArgumentException("The dataETag supplied is not correct");
+    }
     
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
         + uriRefFragment + schemaETag + uriRowsFragment;
-    System.out.println("deleteRowsUsingBulkUpload: agg_uri is " + agg_uri);
+    System.out.println("updateRowsUsingBulkUpload: agg_uri is " + agg_uri);
     
     if (batchSize == 0) {
       batchSize = 500;
@@ -2018,8 +2026,7 @@ public class WinkClient {
         processedRowArrayList.add(rowObj);
 
         if (processedRowArrayList.size() >= batchSize) {
-          tableRes = getTable(uri, appId, tableId);
-          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          dataETag = getTableDataETag(uri, appId, tableId);
           bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
 
           processedRowArrayList = new ArrayList<Row>();
@@ -2027,8 +2034,7 @@ public class WinkClient {
       }
 
       if (processedRowArrayList.size() > 0) {
-        tableRes = getTable(uri, appId, tableId);
-        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
       }
     
@@ -2045,16 +2051,20 @@ public class WinkClient {
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
-   * @param dataETag identifies the last change of the table
+   * @param dataETagVal identifies the last change of the table
    * @param rowArrayList an ArrayList of rows to create
    * @param batchSize used to set the batch size of rows sent to the server - 
    * if 0 is passed in, the default of 500 is used 
+   * @throws Exception any exception encountered is thrown to the caller
    */
-  public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize) {
-    String dataETag = null;
-    JSONObject tableRes = null;
-    // CAL: Not sure how to deal with the first pass
-    boolean first = true;
+  public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
+      ArrayList<Row> rowArrayList, int batchSize) throws Exception{
+    String dataETag = getTableDataETag(uri, appId, tableId);
+
+    // Check that the dataETag is valid before beginning
+    if (!dataETag.equals(dataETagVal)) {
+      throw new IllegalArgumentException("The dataETag supplied is not correct");
+    }
     
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
         + uriRefFragment + schemaETag + uriRowsFragment;
@@ -2078,8 +2088,7 @@ public class WinkClient {
         processedRowArrayList.add(rowObj);
 
         if (processedRowArrayList.size() >= batchSize) {
-          tableRes = getTable(uri, appId, tableId);
-          dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+          dataETag = getTableDataETag(uri, appId, tableId);
           bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
 
           processedRowArrayList = new ArrayList<Row>();
@@ -2087,8 +2096,7 @@ public class WinkClient {
       }
 
       if (processedRowArrayList.size() > 0) {
-        tableRes = getTable(uri, appId, tableId);
-        dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+        dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
       }
     
@@ -2096,34 +2104,57 @@ public class WinkClient {
       e.printStackTrace();
     }
   }
+  
+  /**
+   * Alters row(s) in the table associated with
+   * the tableId and schemaETag for one batch - the size 
+   * of the batch should not exceed 500.
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param dataETagVal identifies the last change of the table
+   * @param rowArrayList an ArrayList of rows to create
+   * @return a RowOutcomeList with the row outcome and row data if applicable
+   * @throws Exception any exception encountered is thrown to the caller
+   */
+  public RowOutcomeList alterRowsUsingSingleBatch(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
+      ArrayList<Row> rowArrayList) throws Exception{
+    RowOutcomeList outcome = new RowOutcomeList();
+    
+    String dataETag = getTableDataETag(uri, appId, tableId);
 
-//  /**
-//   * Deletes a row in the table associated with
-//   * the tableId and schemaETag given a rowId and
-//   * rowETag. 
-//   * 
-//   * @param uri the url for the server
-//   * @param appId identifies the application
-//   * @param tableId the table identifier or name
-//   * @param schemaETag identifies an instance of the table
-//   * @param rowId the unique identifier for a row
-//   * @param rowETag identifies a certain instance of a row
-//   */
-//  public void deleteRow(String uri, String appId, String tableId, String schemaETag, String rowId,
-//      String rowETag) {
-//    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-//        + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId + uriRowETagFragment
-//        + rowETag;
-//    System.out.println("deleteRow: agg_uri is " + agg_uri);
-//
-//    RestClient restClient = new RestClient();
-//
-//    System.out.println("deleteRow: agg_uri is " + agg_uri);
-//    Resource resource = restClient.resource(agg_uri);
-//
-//    ClientResponse response = resource.accept("application/json").delete();
-//    System.out.println("deleteRow: client response is " + response.getMessage());
-//  }
+    // Check that the dataETag is valid before beginning
+    if (!dataETag.equals(dataETagVal)) {
+      throw new IllegalArgumentException("The dataETag supplied is not correct");
+    }
+    
+    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+        + uriRefFragment + schemaETag + uriRowsFragment;
+    System.out.println("alterRowsUsingSingleBatch: agg_uri is " + agg_uri);
+    
+    try {
+      ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
+
+      for (int i = 0; i < rowArrayList.size(); i++) {
+        Row row = rowArrayList.get(i);
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
+            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+        
+        processedRowArrayList.add(rowObj);
+      }
+
+      if (processedRowArrayList.size() > 0) {
+        outcome = bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+      }
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    return outcome;
+  }
 
   /**
    * Get the file attachment and save it to 

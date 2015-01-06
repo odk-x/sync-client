@@ -26,4 +26,4 @@ After running mvn install, the index for documentation will be found under opend
 -------------
 JAR files
 -------------
-The jar file that will be generated from running mvn install is opendatakit.wink/target/wink-0.1-SNAPSHOT.jar.  The opendatakit.wink/target/wink-0.1-SNAPSHOT-javadoc.jar contains all of the documentation that can also be found under opendatakit.wink/target/apidocs  
+The jar file that will be generated from running mvn install is opendatakit.wink/target/wink-0.3-SNAPSHOT.jar.  The opendatakit.wink/target/wink-0.3-SNAPSHOT-javadoc.jar contains all of the documentation that can also be found under opendatakit.wink/target/apidocs  
