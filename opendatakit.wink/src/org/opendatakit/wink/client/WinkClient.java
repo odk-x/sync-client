@@ -1348,8 +1348,9 @@ public class WinkClient {
     	System.out.println("writeRowDataToCSV: There are no rows to write out!");
     	return;
     }
-    
+
     File file = new File(csvFilePath);
+    file.getParentFile().mkdirs();
     if (!file.exists()) {
       file.createNewFile();
     }
