@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class WinkClientTest extends TestCase {
   String agg_url;
   String appId;
   String absolutePathOfTestFiles;
+  String host;
+  String userName;
+  String password;
   int batchSize;
   
   //String agg_url = "https://clarlars.appspot.com";
@@ -46,6 +50,8 @@ public class WinkClientTest extends TestCase {
 
   //String agg_url = "http://107.178.213.121:8080/odktables";
   //String appId = "mezuri-10100233";
+  
+  //String host = "clarlars-test.appspot.com";
 
   /*
    * Perform setup for test if necessary
@@ -53,10 +59,23 @@ public class WinkClientTest extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    agg_url = System.getProperty("test.aggUrl");
-    appId = System.getProperty("test.appId");
-    absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
-    batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
+    //agg_url = System.getProperty("test.aggUrl");
+    //appId = System.getProperty("test.appId");
+    //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
+    //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
+    
+    //agg_url = "https://clarlars.appspot.com";
+    //agg_url = "https://clarlars-test.appspot.com";
+    agg_url = "https://odk-test-area.appspot.com";
+    //agg_url = "https://test-agg.appspot.com";
+    appId = "odktables/tables";
+    absolutePathOfTestFiles = "testfiles/test/";
+    batchSize = 1000;
+    userName = "clarice";
+    //password = "clariceisAWESOME";
+    password = "aggregate";
+    URL url = new URL(agg_url);
+    host = url.getHost();
   }
 
   /*
@@ -74,12 +93,12 @@ public class WinkClientTest extends TestCase {
 
   }
 
-  public boolean checkThatFileExistsOnServer(String agg_url, String appId, String relativeFileNameOnServer) {
+  public boolean checkThatFileExistsOnServer(WinkClient wc, String agg_url, String appId, String relativeFileNameOnServer) {
     // Make sure the server has added the file
     boolean found = false;
-    WinkClient wc = new WinkClient();
 
     try {
+      wc.init(host, userName, password);
       JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
       JSONArray files = obj.getJSONArray("files");
 
@@ -98,12 +117,12 @@ public class WinkClientTest extends TestCase {
     return found;
   }
   
-  public boolean checkThatTableLevelFileExistsOnServer(String agg_url, String appId, String tableId, String relativeFileNameOnServer) {
+  public boolean checkThatTableLevelFileExistsOnServer(WinkClient wc, String agg_url, String appId, String tableId, String relativeFileNameOnServer) {
 	    // Make sure the server has added the file
 	    boolean found = false;
-	    WinkClient wc = new WinkClient();
 
 	    try {
+	      wc.init(host, userName, password);
 	      JSONObject obj = wc.getManifestForTableId(agg_url, appId, tableId);
 	      JSONArray files = obj.getJSONArray("files");
 
@@ -115,6 +134,7 @@ public class WinkClientTest extends TestCase {
 	          break;
 	        }
 	      }
+
 	    } catch (Exception e) {
 	      e.printStackTrace();
 	    }
@@ -122,13 +142,13 @@ public class WinkClientTest extends TestCase {
 	    return found;
 	  }
 
-  public boolean checkThatInstanceFileExistsOnServer(String agg_url, String appId, String tableId,
+  public boolean checkThatInstanceFileExistsOnServer(WinkClient wc, String agg_url, String appId, String tableId,
       String schemaETag, String rowId, String relativeFileNameOnServer) {
     // Make sure the server has added the file
     boolean found = false;
-    WinkClient wc = new WinkClient();
 
     try {
+      wc.init(host, userName, password);
       JSONObject obj = wc.getManifestForRow(agg_url, appId, tableId, schemaETag, rowId);
       JSONArray files = obj.getJSONArray("files");
 
@@ -140,6 +160,7 @@ public class WinkClientTest extends TestCase {
           break;
         }
       }
+
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -288,6 +309,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
       JSONObject obj = wc.getTables(agg_url, appId);
 
       JSONArray tables = obj.getJSONArray("tables");
@@ -300,7 +322,7 @@ public class WinkClientTest extends TestCase {
           }
         }
       }
-
+      wc.close();
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -319,12 +341,13 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 
       // Make sure that the file is on the server
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertTrue(foundFile);
 
@@ -332,10 +355,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
-
+      
+      wc.close();
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testUploadFileWithValidBinaryFile_ExpectPass: expected pass for " + testFile);
@@ -353,12 +377,13 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 
       // Make sure that the file is on the server
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertTrue(foundFile);
 
@@ -366,9 +391,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -394,7 +421,7 @@ public class WinkClientTest extends TestCase {
 //      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 //
 //      // Make sure that the file is on the server
-//      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+//      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 //
 //      assertTrue(foundFile);
 //
@@ -402,7 +429,7 @@ public class WinkClientTest extends TestCase {
 //      wc.deleteFile(agg_url, appId, relativeTestFilePath);
 //
 //      // Make sure the server no longer has the file
-//      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+//      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 //
 //      assertFalse(foundFile);
 //
@@ -420,9 +447,11 @@ public class WinkClientTest extends TestCase {
     String relativeTestFilePath = "assets/index.html";
     String testFile = absolutePathOfTestFiles + relativeTestFilePath;
     boolean thrown = false;
-
+    WinkClient wc = null;
+    
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.uploadFile(null, appId, testFile, relativeTestFilePath);
@@ -430,6 +459,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -441,9 +474,11 @@ public class WinkClientTest extends TestCase {
   public void testUploadFileWhenTestFileIsNull_ExpectFail() {
     String relativeTestFilePath = "assets/index.html";
     boolean thrown = false;
-
+    WinkClient wc = null;
+    
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, null, relativeTestFilePath);
@@ -451,6 +486,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -463,9 +502,11 @@ public class WinkClientTest extends TestCase {
     String relativeTestFilePath = "assets/index.html";
     String testFile = absolutePathOfTestFiles + relativeTestFilePath;
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, null);
@@ -473,6 +514,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -491,6 +536,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
@@ -507,9 +553,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -532,6 +580,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
@@ -548,9 +597,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -568,9 +619,11 @@ public class WinkClientTest extends TestCase {
     String relativeTestFilePath = "assets/index.html";
     String testFile = absolutePathOfTestFiles + relativeTestFilePath;
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.downloadFile(null, appId, testFile, relativeTestFilePath);
@@ -578,6 +631,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -590,9 +647,11 @@ public class WinkClientTest extends TestCase {
   public void testDownloadFileWhenTestFileIsNull_ExpectFail() {
     String relativeTestFilePath = "assets/index.html";
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.downloadFile(agg_url, appId, null, relativeTestFilePath);
@@ -600,6 +659,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -612,9 +675,11 @@ public class WinkClientTest extends TestCase {
     String relativeTestFilePath = "assets/index.html";
     String testFile = absolutePathOfTestFiles + relativeTestFilePath;
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.downloadFile(agg_url, appId, testFile, null);
@@ -622,6 +687,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -637,12 +706,13 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 
       // Check that the server has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertTrue(foundFile);
 
@@ -650,9 +720,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -672,12 +744,13 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 
       // Check that the file is on the server
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertTrue(foundFile);
 
@@ -685,9 +758,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -703,9 +778,11 @@ public class WinkClientTest extends TestCase {
 
     String relativeTestFilePath = "assets/index.html";
     boolean thrown = false;
-
+    WinkClient wc = null;
+    
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.deleteFile(null, appId, relativeTestFilePath);
@@ -713,6 +790,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -724,9 +805,11 @@ public class WinkClientTest extends TestCase {
    */
   public void testDeleteFileWhenRelativePathIsNull_ExpectFail() {
     boolean thrown = false;
-
+    WinkClient wc = null;
+    
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Check the data from the file
       wc.deleteFile(agg_url, appId, null);
@@ -734,6 +817,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -749,8 +836,11 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
+      //wc.init();
+      wc.init(host, userName, password);
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
 
       // Test the manifest
@@ -772,9 +862,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -793,6 +885,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Test the manifest
       JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
@@ -808,6 +901,8 @@ public class WinkClientTest extends TestCase {
       }
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -820,9 +915,11 @@ public class WinkClientTest extends TestCase {
    */
   public void testGetManifestForAppLevelFilesWhenUriIsNull_ExpectFail() {
     boolean thrown = false;
-
+    WinkClient wc = null;
+    
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Test the manifest
       wc.getManifestForAppLevelFiles(null, appId);
@@ -830,6 +927,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
     assertTrue(thrown);
   }
@@ -837,11 +938,13 @@ public class WinkClientTest extends TestCase {
   /*
    * Test getting the manifest for app level files when uri is null
    */
-  public void tesGetAllAppLevelFilesFromUri_ExpectPass() {
+  public void tesGetAllAppLevelFilesFromUri_ExpectFail() {
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Test the manifest
       wc.getManifestForAppLevelFiles(null, appId);
@@ -849,6 +952,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
     assertTrue(thrown);
   }
@@ -867,6 +974,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
@@ -883,9 +991,11 @@ public class WinkClientTest extends TestCase {
       wc.deleteFile(agg_url, appId, relativeTestFilePath);
 
       // Make sure the server no longer has the file
-      foundFile = checkThatFileExistsOnServer(agg_url, appId, relativeTestFilePath);
+      foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
 
       assertFalse(foundFile);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -899,9 +1009,11 @@ public class WinkClientTest extends TestCase {
   public void testGetAllAppLevelFilesFromUriWhenUriIsNull_ExpectFail() {
     boolean thrown = true;
     String dowloadTestDir = absolutePathOfTestFiles + "testAppLevelFiles/";
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Get the file off of the server
       wc.getAllAppLevelFilesFromUri(null, appId, dowloadTestDir);
@@ -909,6 +1021,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -919,9 +1035,11 @@ public class WinkClientTest extends TestCase {
    */
   public void testGetAllAppLevelFilesFromUriWhenDirToSaveIsNull_ExpectFail() {
     boolean thrown = true;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       // Get the file off of the server
       wc.getAllAppLevelFilesFromUri(agg_url, appId, null);
@@ -929,6 +1047,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -950,6 +1072,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -974,6 +1097,8 @@ public class WinkClientTest extends TestCase {
       }
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -993,9 +1118,11 @@ public class WinkClientTest extends TestCase {
     String colType = "string";
     String listOfChildElements = "[]";
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1006,6 +1133,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -1021,9 +1152,11 @@ public class WinkClientTest extends TestCase {
     String listOfChildElements = "[]";
     String testTableSchemaETag = "testCreateTableWhenTableIdIsNull_ExpectFail";
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1034,6 +1167,10 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -1046,15 +1183,21 @@ public class WinkClientTest extends TestCase {
     String testTableId = "test2";
     String testTableSchemaETag = "testCreateTableWhenColumnsIsNull_ExpectFail";
     boolean thrown = false;
+    WinkClient wc = null;
 
     try {
-      WinkClient wc = new WinkClient();
+      wc = new WinkClient();
+      wc.init(host, userName, password);
 
       wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, null);
 
     } catch (Exception e) {
       e.printStackTrace();
       thrown = true;
+    } finally {
+      if (wc != null) {
+        wc.close();
+      }
     }
 
     assertTrue(thrown);
@@ -1070,6 +1213,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateTableWithCSVAndValidData_ExpectPass: result is " + result);
@@ -1088,6 +1232,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1107,6 +1253,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
       
       File file = new File(csvFile);
 
@@ -1129,6 +1276,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1152,6 +1301,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1168,6 +1318,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1179,7 +1331,7 @@ public class WinkClientTest extends TestCase {
   /*
    * test createTable when schemaETag is null
    */
-  public void testCreateTableWhenSchemaETagIsNull_ExpectFail() {
+  public void testCreateTableWhenSchemaETagIsNull_ExpectPass() {
     String testTableId = "test6";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
@@ -1190,6 +1342,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1214,10 +1367,12 @@ public class WinkClientTest extends TestCase {
       }
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
-      TestCase.fail("testCreateTableWhenSchemaETagIsNull_ExpectFail: expected pass");
+      TestCase.fail("testCreateTableWhenSchemaETagIsNull_ExpectPass: expected pass");
     }
   }
 
@@ -1233,6 +1388,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1262,6 +1418,59 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetTablesWhenTableExists_ExpectPass: expected pass for getting table");
+    }
+  }
+  
+  public void testGetTablesForTestNeedToDelete_ExpectPass() {
+    String testTableId = "test7";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+    boolean found = false;
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      JSONObject obj = wc.getTables(agg_url, appId);
+      JSONArray tables = obj.getJSONArray("tables");
+
+      for (int i = 0; i < tables.size(); i++) {
+        JSONObject table = tables.getJSONObject(i);
+        if (testTableId.equals(table.getString("tableId"))) {
+          found = true;
+          break;
+        }
+      }
+
+      assertTrue(found);
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1280,6 +1489,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1299,6 +1509,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1317,6 +1529,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1338,6 +1551,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1356,6 +1571,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1380,6 +1596,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1400,6 +1618,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1430,6 +1649,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1446,6 +1667,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVWithValidFile_ExpectPass: result is " + result);
@@ -1465,6 +1687,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1481,6 +1705,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testGetRowsWhenRowsExist_ExpectPass: result is " + result);
@@ -1500,6 +1725,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1516,6 +1743,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testGetRowsSinceWhenRowsExist_ExpectPass: result is " + result);
@@ -1536,6 +1764,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1553,6 +1783,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result is " + result);
@@ -1569,6 +1800,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1590,6 +1823,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1643,6 +1877,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1666,6 +1902,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1684,6 +1921,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1705,6 +1944,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1751,6 +1991,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1776,6 +2018,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1814,13 +2057,15 @@ public class WinkClientTest extends TestCase {
           relativePathOnServer);
 
       // Make sure that the file is on the server foundFile =
-      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
+      foundFile = checkThatInstanceFileExistsOnServer(wc, agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
 
       assertTrue(foundFile);
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1847,6 +2092,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1884,7 +2130,7 @@ public class WinkClientTest extends TestCase {
       wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile, relativePathOnServer);
 
       // Make sure that the file is on the server
-      foundFile = checkThatInstanceFileExistsOnServer(agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
+      foundFile = checkThatInstanceFileExistsOnServer(wc, agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
 
       assertTrue(foundFile);
 
@@ -1898,6 +2144,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1915,7 +2163,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
-      
+      wc.init(host, userName, password);
  
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: result is " + result);
@@ -1943,6 +2191,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1960,6 +2210,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result of create table is " + result);
@@ -1978,6 +2229,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1996,6 +2249,7 @@ public class WinkClientTest extends TestCase {
     
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
       System.out.println("testCreateTableWithJSON_ExpectPass: result is " + result);
@@ -2018,6 +2272,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2039,6 +2295,7 @@ public class WinkClientTest extends TestCase {
     
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
       System.out.println("testCreateRowsUsingJSONBulkUpload_ExpectPass: result is " + result);
@@ -2089,6 +2346,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2112,6 +2371,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2125,7 +2385,7 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
       
-      String eTag = WinkClient.getSchemaETagForTable(agg_url, appId, testTableId);
+      String eTag = wc.getSchemaETagForTable(agg_url, appId, testTableId);
       
       assertEquals(tableSchemaETag, eTag);
 
@@ -2140,6 +2400,8 @@ public class WinkClientTest extends TestCase {
       }
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2167,6 +2429,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2210,6 +2473,8 @@ public class WinkClientTest extends TestCase {
       assertTrue(checkThatRowExists(RowId, utf_val, jsonRow));
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2238,6 +2503,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2270,6 +2536,8 @@ public class WinkClientTest extends TestCase {
       }
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2298,6 +2566,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2330,6 +2599,8 @@ public class WinkClientTest extends TestCase {
       }
       
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2352,6 +2623,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2405,6 +2677,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2427,6 +2701,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2488,6 +2763,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2503,6 +2780,7 @@ public class WinkClientTest extends TestCase {
     String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.edited.csv";
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVBulkUpload_ExpectPass: result is " + result);
@@ -2523,6 +2801,8 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2530,7 +2810,7 @@ public class WinkClientTest extends TestCase {
     }
   }
 
-  public void testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass() {
+  /*public void testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass() {
     String testTableId = "test41";
     String tableSchemaETag = null;
 
@@ -2539,6 +2819,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass: result is " + result);
@@ -2553,12 +2834,14 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass: expected pass");
     }
-  }
+  }*/
   
   public void testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass() {
 	    String testTableId = "test42";
@@ -2569,9 +2852,10 @@ public class WinkClientTest extends TestCase {
 
 	    try {
 	      WinkClient wc = new WinkClient();
+	      wc.init(host, userName, password);
 
 	      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
-	      System.out.println("testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass: result is " + result);
+	      System.out.println("testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass: result is " + result);
 
 	      if (result.containsKey("tableId")) {
 	        String tableId = result.getString("tableId");
@@ -2583,14 +2867,16 @@ public class WinkClientTest extends TestCase {
 
 	      // Now delete the table
 	      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+	      
+	      wc.close();
 
 	    } catch (Exception e) {
 	      e.printStackTrace();
-	      TestCase.fail("testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass: expected pass");
+	      TestCase.fail("testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass: expected pass");
 	    }
 	  }
     
-  public void testCreateRowsUsingCSVInputStreamBulkUploadWithLotsOfData_ExpectPass() {
+  /*public void testCreateRowsUsingCSVInputStreamBulkUploadWithLotsOfData_ExpectPass() {
     String testTableId = "test43";
     String tableSchemaETag = null;
 
@@ -2599,6 +2885,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
       
       File file1 = new File(csvFile);
 
@@ -2621,12 +2908,14 @@ public class WinkClientTest extends TestCase {
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testCreateRowsUsingCSVInputStreamBulkUploadWithLotsOfData_ExpectPass: expected pass");
     }
-  }
+  }*/
   
   public void testCreateRowsUsingBulkUploadWithValidData_ExpectPass() {
     String testTableId = "test62";
@@ -2641,6 +2930,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2676,6 +2966,8 @@ public class WinkClientTest extends TestCase {
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -2696,6 +2988,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
 
       wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom);
       File fileDirToGetDataFrom = new File(dirToGetDataFrom);
@@ -2757,6 +3050,7 @@ public class WinkClientTest extends TestCase {
       
       assertEquals(files.size(), 0);
       
+      wc.close();
 
     } catch (Exception e) {
       e.printStackTrace();

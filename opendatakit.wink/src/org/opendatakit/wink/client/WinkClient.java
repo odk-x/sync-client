@@ -9,18 +9,45 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.zip.DataFormatException;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.auth.params.AuthPNames;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.wink.client.ClientResponse;
-import org.apache.wink.client.Resource;
-import org.apache.wink.client.RestClient;
+import org.apache.http.client.CookieStore;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.params.AuthPolicy;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.params.CookiePolicy;
+import org.apache.http.client.params.HttpClientParams;
+import org.apache.http.client.protocol.ClientContext;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+//import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONException;
 import org.apache.wink.json4j.JSONObject;
@@ -152,6 +179,14 @@ public class WinkClient {
   
   public static String defaultFetchLimit = "1000";
 
+  private DefaultHttpClient httpClient = null;
+
+  private HttpContext localContext = null;
+
+  private CookieStore cookieStore = null;
+  
+  private CredentialsProvider credsProvider = null;
+  
   static Map<String, String> mimeMapping;
 
   static {
@@ -210,6 +245,101 @@ public class WinkClient {
   }
   
   /**
+   * Init client with default parameters 
+   * 
+   */
+  public void init() {
+    httpClient = new DefaultHttpClient();
+  }
+  
+  /**
+   * Init client with parameters for digest auth
+   * 
+   * @param host the host name to authenticate against
+   * @param userName the user name to use for authentication 
+   * @param password the password to use for authentication
+   */
+  public void init(String host, String userName, String password) {
+    int CONNECTION_TIMEOUT = 60000;
+    HttpParams params = new BasicHttpParams();
+    HttpConnectionParams.setConnectionTimeout(params, CONNECTION_TIMEOUT);
+    HttpConnectionParams.setSoTimeout(params, 2 * CONNECTION_TIMEOUT);
+    // support redirecting to handle http: => https: transition
+    HttpClientParams.setRedirecting(params, true);
+    // support authenticating
+    HttpClientParams.setAuthenticating(params, true);
+    HttpClientParams.setCookiePolicy(params,
+        CookiePolicy.BROWSER_COMPATIBILITY);
+    // if possible, bias toward digest auth (may not be in 4.0 beta 2)
+    List<String> authPref = new ArrayList<String>();
+    authPref.add(AuthPolicy.DIGEST);
+    authPref.add(AuthPolicy.BASIC);
+    // does this work in Google's 4.0 beta 2 snapshot?
+    params.setParameter(AuthPNames.TARGET_AUTH_PREF, authPref);
+    params.setParameter(ClientPNames.MAX_REDIRECTS, 4);
+    params.setParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, true);
+    
+    httpClient = new DefaultHttpClient();
+    httpClient.setParams(params);
+    
+    // Context 
+
+    // context holds authentication state machine, so it cannot be
+    // shared across independent activities.
+    localContext = new BasicHttpContext();
+
+    cookieStore = new BasicCookieStore();
+    credsProvider = new BasicCredentialsProvider();
+    
+    //AuthScope a = new AuthScope("adapt.epi-ucsf.org", -1, null, AuthPolicy.DIGEST);
+    AuthScope a = new AuthScope(host, -1, null, AuthPolicy.DIGEST);
+    Credentials c = new UsernamePasswordCredentials(userName, password);
+    credsProvider.setCredentials(a, c);
+    
+    localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+    localContext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
+  }
+  
+  /**
+   * Init client parameters for authentication  
+   * 
+   * @param host the host to authenticate against
+   * @param userName the user name  to use for auth
+   * @param password the password to use for auth
+   * @param basicParams the http parameters to use
+   * @param basicStore the cookie store to use 
+   * @param basicProvider the credentials provider to use
+   */
+  public void init(String host, String userName, String password, BasicHttpParams basicParams,
+      BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
+    httpClient = new DefaultHttpClient();
+    if (basicParams != null) {
+      httpClient.setParams(basicParams);
+    }
+
+    localContext = new BasicHttpContext();
+
+    if (basicStore != null) {
+      cookieStore = basicStore;
+      localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+    }
+
+    if  (basicProvider != null) {
+      credsProvider = basicProvider;
+    }
+    
+    if (credsProvider != null && userName != null && password != null && host != null) {
+      AuthScope a = new AuthScope(host, -1, null, AuthPolicy.DIGEST);
+      Credentials c = new UsernamePasswordCredentials(userName, password);
+      credsProvider.setCredentials(a, c);
+    }
+
+    if (credsProvider != null) {
+      localContext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
+    }
+  }
+  
+  /**
    * Gets the schemaETag for the table   
    * 
    * @param agg_url the url for the server
@@ -217,11 +347,12 @@ public class WinkClient {
    * @param tableId the table id for the table in question
    * @return String to return schemaETag value
    */
-  public static String getSchemaETagForTable(String agg_url, String appId, String tableId) {
+  public String getSchemaETagForTable(String agg_url, String appId, String tableId) {
 
     try {
-      WinkClient wc = new WinkClient();
-      JSONObject obj = wc.getTables(agg_url, appId);
+      //WinkClient wc = new WinkClient();
+      //JSONObject obj = wc.getTables(agg_url, appId);
+      JSONObject obj = getTables(agg_url, appId);
 
       JSONArray tables = obj.getJSONArray(jsonTables);
 
@@ -290,7 +421,7 @@ public class WinkClient {
    * 
    * @param dir a file object defining the top level directory
    * @return an ArrayList of strings for all of the file paths
-   **/
+   **/   
   public ArrayList<String> recurseDir(File dir) {
     ArrayList<String> filePaths = new ArrayList<String>();
     File listFile[] = dir.listFiles();
@@ -558,17 +689,51 @@ public class WinkClient {
    */
   public JSONObject getManifestForAppLevelFiles(String uri, String appId) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+      //RestClient restClient = new RestClient();
+      String agg_uri = uri + separator + appId + uriManifest;
+      System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
+      
+      //Resource tableResource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+         response = httpClient.execute(request);
+      }
+    
+      //String tableRes = tableResource.accept("application/json").get(String.class);
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+    
+      
+      //obj = new JSONObject(tableRes);
+      obj = new JSONObject(res);
+      System.out.println("getManifestForAppLevelFiles: result is " + obj.toString());
 
-    String agg_uri = uri + separator + appId + uriManifest;
-    System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
-    Resource tableResource = restClient.resource(agg_uri);
-
-    String tableRes = tableResource.accept("application/json").get(String.class);
-    obj = new JSONObject(tableRes);
-    System.out.println("getManifestForAppLevelFiles: result is " + obj.toString());
-
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
     return obj;
   }
 
@@ -586,6 +751,10 @@ public class WinkClient {
    */
   public void uploadFile(String uri, String appId, String wholePathToFile,
       String relativePathOnServer) throws Exception {
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("uploadFile: uri cannot be null");
@@ -599,37 +768,60 @@ public class WinkClient {
       throw new IllegalArgumentException("uploadFile: relativePathOnServer cannot be null");
     }
 
-    String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator, separator);
-    String agg_uri = uri + separator + appId + uriFilesFragment + uriRelativePath;
-    System.out.println("uploadFile: agg uri is " + agg_uri);
-
-    File file = new File(wholePathToFile);
-    if (!file.exists()) {
-      System.out.println("uploadFile: file " + wholePathToFile + " does not exist");
-      return;
+    HttpPost request = null;
+    try {
+      String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator, separator);
+      String agg_uri = uri + separator + appId + uriFilesFragment + uriRelativePath;
+      System.out.println("uploadFile: agg uri is " + agg_uri);
+  
+      File file = new File(wholePathToFile);
+      if (!file.exists()) {
+        System.out.println("uploadFile: file " + wholePathToFile + " does not exist");
+        return;
+      }
+  
+      //InputStream in = new FileInputStream(file);
+      byte[] data = Files.readAllBytes(file.toPath());
+  
+      // create the rest client instance
+      //RestClient client = new RestClient();
+  
+      // create the resource instance to interact with
+      //Resource resource = client.resource(agg_uri);
+      request = new HttpPost(agg_uri);
+  
+      // issue the request
+      String contentType = this.determineContentType(file.getName());
+      //InputStream response = resource.contentType(contentType).accept(contentType)
+      //    .post(InputStream.class, in);
+      request.addHeader("content-type", contentType + "; charset=utf-8");
+      request.addHeader("accept", contentType);
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      HttpEntity entity = new ByteArrayEntity(data);
+      request.setEntity(entity);
+      
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      System.out.println("uploadFile: response for file " + wholePathToFile + " is ");
+  
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+      String line;
+      while ((line = responseBuff.readLine()) != null)
+        System.out.println(line);
+      //in.close();
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
 
-    InputStream in = new FileInputStream(file);
-
-    // create the rest client instance
-    RestClient client = new RestClient();
-
-    // create the resource instance to interact with
-    Resource resource = client.resource(agg_uri);
-
-    // issue the request
-    String contentType = this.determineContentType(file.getName());
-    InputStream response = resource.contentType(contentType).accept(contentType)
-        .post(InputStream.class, in);
-    System.out.println("uploadFile: response for file " + wholePathToFile + " is ");
-
-    BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response));
-    String line;
-    while ((line = responseBuff.readLine()) != null)
-      System.out.println(line);
-    in.close();
-
-    return;
   }
 
   /**
@@ -647,6 +839,10 @@ public class WinkClient {
   public void downloadFile(String uri, String appId, String pathToSaveFile,
       String relativePathOnServer) throws Exception {
 
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+    
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("downloadFile: uri cannot be null");
     }
@@ -659,38 +855,57 @@ public class WinkClient {
       throw new IllegalArgumentException("downloadFile: relativePathOnServer cannot be null");
     }
 
-    String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
-    System.out.println("downloadFile: agg_uri is " + agg_uri);
-
-    // File to save
-    File file = new File(pathToSaveFile);
-
-    // create the rest client instance
-    RestClient client = new RestClient();
-
-    // create the resource instance to interact with
-    Resource resource = client.resource(agg_uri);
-
-    String accept = determineContentType(file.getName());
-    InputStream fis = resource.accept(accept).get(InputStream.class);
-    System.out.println("downloadFile: issued get request for " + relativePathOnServer);
-
-    file.getParentFile().mkdirs();
-    if (!file.exists()) {
-      file.createNewFile();
+    HttpGet request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
+      System.out.println("downloadFile: agg_uri is " + agg_uri);
+  
+      // File to save
+      File file = new File(pathToSaveFile);
+  
+      // create the rest client instance
+      //RestClient client = new RestClient();
+  
+      // create the resource instance to interact with
+      //Resource resource = client.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+  
+      String accept = determineContentType(file.getName());
+      request.addHeader("content-type", accept + "; charset=utf-8");
+      request.addHeader("accept", accept);
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      //InputStream fis = resource.accept(accept).get(InputStream.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      System.out.println("downloadFile: issued get request for " + relativePathOnServer);
+  
+      file.getParentFile().mkdirs();
+      if (!file.exists()) {
+        file.createNewFile();
+      }
+  
+      InputStream fis = response.getEntity().getContent();
+  
+      FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
+      byte[] buffer = new byte[1024];
+      int len;
+      while ((len = fis.read(buffer)) > 0) {
+        fos.write(buffer, 0, len);
+      }
+      
+      fos.close();
+      fis.close();
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
-
-    FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
-    byte[] buffer = new byte[1024];
-    int len;
-    while ((len = fis.read(buffer)) > 0) {
-      fos.write(buffer, 0, len);
-    }
-
-    fos.close();
-    fis.close();
-
-    return;
   }
 
   /**
@@ -701,8 +916,9 @@ public class WinkClient {
    * @param appId identifies the application
    * @param relativePathOnServer the relative path on the server where
    * the file is stored
+   * @throws Exception any exception encountered during this function
    */
-  public void deleteFile(String uri, String appId, String relativePathOnServer) {
+  public void deleteFile(String uri, String appId, String relativePathOnServer) throws Exception {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: uri cannot be null");
     }
@@ -710,18 +926,40 @@ public class WinkClient {
     if (relativePathOnServer == null || relativePathOnServer.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: relativePathOnServer cannot be null");
     }
-
-    String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
-    System.out.println("deleteFile: agg_uri is " + agg_uri);
-
-    RestClient restClient = new RestClient();
-
-    Resource resource = restClient.resource(agg_uri);
-
-    ClientResponse response = resource.accept("application/json").delete();
-    System.out.println("deleteFile: client response is " + response.getMessage());
-
-    return;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+    
+    HttpDelete request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
+      System.out.println("deleteFile: agg_uri is " + agg_uri);
+  
+      //RestClient restClient = new RestClient();
+  
+      //Resource resource = restClient.resource(agg_uri);
+      request = new HttpDelete(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+  
+      //ClientResponse response = resource.accept("application/json").delete();
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      System.out.println("deleteFile: client response is " + response.getStatusLine().getStatusCode() + ":" +
+          response.getStatusLine().getReasonPhrase());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
   }
 
   /**
@@ -735,18 +973,51 @@ public class WinkClient {
    */
   public JSONObject getTables(String uri, String appId) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment;
+
     System.out.println("getTables: agg uri is " + agg_uri);
 
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").get(String.class);
+    //Resource resource = restClient.resource(agg_uri);
+    request = new HttpGet(agg_uri);
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
+
+    //String res = resource.accept("application/json").get(String.class);
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
 
     obj = new JSONObject(res);
 
     System.out.println("getTables: result is " + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return obj;
   }
@@ -763,19 +1034,50 @@ public class WinkClient {
    */
   public JSONObject getTable(String uri, String appId, String tableId) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
     System.out.println("getTable: agg uri is " + agg_uri);
 
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").get(String.class);
+    //Resource resource = restClient.resource(agg_uri);
+    request = new HttpGet(agg_uri);
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
+    
+    //String res = resource.accept("application/json").get(String.class);
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
 
     obj = new JSONObject(res);
 
     System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
-
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
     return obj;
   }
   
@@ -819,6 +1121,10 @@ public class WinkClient {
     JSONArray cols = new JSONArray();
     JSONObject col;
     JSONObject result = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("createTable: uri cannot be null");
@@ -832,34 +1138,64 @@ public class WinkClient {
       throw new IllegalArgumentException("createTable: columns cannot be null");
     }
 
-    RestClient restClient = new RestClient();
-
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
-    System.out.println("createTable: agg_uri is " + agg_uri);
-
-    // Add the columns to the table object
-    for (int i = 0; i < columns.size(); i++) {
-      col = new JSONObject();
-      col.put("elementKey", columns.get(i).getElementKey());
-      col.put("elementName", columns.get(i).getElementName());
-      col.put("elementType", columns.get(i).getElementType());
-      col.put("listChildElementKeys", columns.get(i).getListChildElementKeys());
-      cols.add(col);
+    HttpPut request = null;
+    try {
+      //RestClient restClient = new RestClient();
+  
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
+      System.out.println("createTable: agg_uri is " + agg_uri);
+  
+      // Add the columns to the table object
+      for (int i = 0; i < columns.size(); i++) {
+        col = new JSONObject();
+        col.put("elementKey", columns.get(i).getElementKey());
+        col.put("elementName", columns.get(i).getElementName());
+        col.put("elementType", columns.get(i).getElementType());
+        col.put("listChildElementKeys", columns.get(i).getListChildElementKeys());
+        cols.add(col);
+      }
+  
+      tableObj.put("schemaETag", schemaETag);
+      tableObj.put("tableId", tableId);
+      tableObj.put("orderedColumns", cols);
+  
+      System.out.println("createTable: with object " + tableObj.toString());
+  
+      //Resource resource = restClient.resource(agg_uri);
+      request = new HttpPut(agg_uri);
+      StringEntity params = new StringEntity(tableObj.toString(), "UTF-8");
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      request.setEntity(params);
+      
+      //String res = resource.accept("application/json").contentType("application/json")
+      //    .put(String.class, tableObj.toString());
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+  
+      System.out.println("createTable: result is for tableId " + tableId + " is " + res.toString());
+  
+      result = new JSONObject(res);
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
-
-    tableObj.put("schemaETag", schemaETag);
-    tableObj.put("tableId", tableId);
-    tableObj.put("orderedColumns", cols);
-
-    System.out.println("createTable: with object " + tableObj.toString());
-
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").contentType("application/json")
-        .put(String.class, tableObj.toString());
-
-    System.out.println("createTable: result is for tableId " + tableId + " is " + res.toString());
-
-    result = new JSONObject(res);
 
     return result;
   }
@@ -882,6 +1218,10 @@ public class WinkClient {
     JSONObject tableObj = new JSONObject();
     JSONObject col;
     JSONObject result = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("createTableWithJSON: uri cannot be null");
@@ -895,7 +1235,9 @@ public class WinkClient {
       throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject cannot be null");
     }
 
-    RestClient restClient = new RestClient();
+    HttpPut request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
     System.out.println("createTableWithJSON: agg_uri is " + agg_uri);
@@ -939,13 +1281,41 @@ public class WinkClient {
 
     System.out.println("createTableWithJSON: with object " + tableObj.toString());
 
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").contentType("application/json")
-        .put(String.class, tableObj.toString());
+    //Resource resource = restClient.resource(agg_uri);
+    request = new HttpPut(agg_uri);
+    StringEntity params = new StringEntity(tableObj.toString(), "UTF-8");
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
+    request.setEntity(params);
+    
+    //String res = resource.accept("application/json").contentType("application/json")
+    //    .put(String.class, tableObj.toString());
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
 
     System.out.println("createTableWithJSON: result is for tableId " + tableId + " is " + res.toString());
 
     result = new JSONObject(res);
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return result;
   }
@@ -1114,21 +1484,53 @@ public class WinkClient {
   public JSONObject getTableDefinition(String uri, String appId, String tableId, String schemaETag)
       throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
         + uriRefFragment + schemaETag;
     System.out.println("getTableDefinition: agg uri is " + agg_uri);
 
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").contentType("application/json")
-        .get(String.class);
+    //Resource resource = restClient.resource(agg_uri);
+    request = new HttpGet(agg_uri);
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
+    
+    //String res = resource.accept("application/json").contentType("application/json")
+    //    .get(String.class);
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
 
     obj = new JSONObject(res);
 
     System.out.println("getTableDefinition: result is for tableId " + tableId + " and schemaEtag "
         + schemaETag + " is " + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return obj;
   }
@@ -1141,19 +1543,44 @@ public class WinkClient {
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
+   * @throws Exception any exception encountered during this function
    */
-  public void deleteTableDefinition(String uri, String appId, String tableId, String schemaETag) {
+  public void deleteTableDefinition(String uri, String appId, String tableId, String schemaETag) throws Exception {
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag;
-
-    RestClient restClient = new RestClient();
-
-    System.out.println("deleteTableDefinition: agg_uri is " + agg_uri);
-    Resource resource = restClient.resource(agg_uri);
-
-    ClientResponse response = resource.accept("application/json").delete();
-    System.out.println("deleteTableDefinition: client response is " + response.getMessage());
+    HttpDelete request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag;
+  
+      //RestClient restClient = new RestClient();
+  
+      System.out.println("deleteTableDefinition: agg_uri is " + agg_uri);
+      //Resource resource = restClient.resource(agg_uri);
+      request = new HttpDelete(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+  
+      //ClientResponse response = resource.accept("application/json").delete();
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      System.out.println("deleteTableDefinition: client response is " + 
+          response.getStatusLine().getStatusCode() + ":" + 
+          response.getStatusLine().getReasonPhrase());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
   }
 
@@ -1171,16 +1598,44 @@ public class WinkClient {
       throws Exception {
     JSONObject obj = null;
 
-    RestClient restClient = new RestClient();
-
-    String agg_uri = uri + separator + appId + uriManifest + separator + tableId;
-    System.out.println("getManifestForTableId: agg uri is " + agg_uri);
-
-    Resource resource = restClient.resource(agg_uri);
-
-    String res = resource.accept("application/json").get(String.class);
-    obj = new JSONObject(res);
-    System.out.println("getTableIdManifest: result for " + tableId + " is " + obj.toString());
+    HttpGet request = null;
+    try {
+      //RestClient restClient = new RestClient();
+  
+      String agg_uri = uri + separator + appId + uriManifest + separator + tableId;
+      System.out.println("getManifestForTableId: agg uri is " + agg_uri);
+  
+      //Resource resource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+  
+      //String res = resource.accept("application/json").get(String.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+  
+      obj = new JSONObject(res);
+      System.out.println("getTableIdManifest: result for " + tableId + " is " + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return obj;
   }
@@ -1211,51 +1666,84 @@ public class WinkClient {
     boolean useFetchLimit = false;
     boolean useDataETag = false;
 
-    RestClient restClient = new RestClient();
-
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
-
-    if (cursor != null && !cursor.isEmpty()) {
-      useCursor = true;
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
     }
-
-    if (fetchLimit != null && !fetchLimit.isEmpty()) {
-      useFetchLimit = true;
-    }
-
-    if (dataETag != null && !dataETag.isEmpty()) {
-      useDataETag = true;
-    }
-
-    if (useCursor || useFetchLimit || useDataETag) {
-      agg_uri = agg_uri + "?";
-    }
-
-    if (useCursor) {
-      agg_uri = agg_uri + queryParamCursor + cursor;
-      if (useFetchLimit || useDataETag) {
-        agg_uri = agg_uri + "&";
+    
+    HttpGet request = null;
+    try {
+      //RestClient restClient = new RestClient();
+  
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriRowsFragment;
+  
+      if (cursor != null && !cursor.isEmpty()) {
+        useCursor = true;
       }
-    }
-
-    if (useFetchLimit) {
-      agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
+  
+      if (fetchLimit != null && !fetchLimit.isEmpty()) {
+        useFetchLimit = true;
+      }
+  
+      if (dataETag != null && !dataETag.isEmpty()) {
+        useDataETag = true;
+      }
+  
+      if (useCursor || useFetchLimit || useDataETag) {
+        agg_uri = agg_uri + "?";
+      }
+  
+      if (useCursor) {
+        agg_uri = agg_uri + queryParamCursor + cursor;
+        if (useFetchLimit || useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+  
+      if (useFetchLimit) {
+        agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
+        if (useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+  
       if (useDataETag) {
-        agg_uri = agg_uri + "&";
+        agg_uri = agg_uri + queryParamDataETag + dataETag;
+      }
+  
+      //Resource tableResource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      System.out.println("getRowsSince: agg uri is " + agg_uri);
+  
+      //String tableRes = tableResource.accept("application/json").get(String.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String tableRes = strLine.toString();
+      
+      obj = new JSONObject(tableRes);
+      System.out.println("getRowsSince: result for " + tableId + " is " + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
       }
     }
-
-    if (useDataETag) {
-      agg_uri = agg_uri + queryParamDataETag + dataETag;
-    }
-
-    Resource tableResource = restClient.resource(agg_uri);
-    System.out.println("getRowsSince: agg uri is " + agg_uri);
-
-    String tableRes = tableResource.accept("application/json").get(String.class);
-    obj = new JSONObject(tableRes);
-    System.out.println("getRowsSince: result for " + tableId + " is " + obj.toString());
 
     return obj;
   }
@@ -1279,9 +1767,15 @@ public class WinkClient {
     JSONObject obj = null;
     boolean useCursor = false;
     boolean useFetchLimit = false;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+    
+    HttpGet request = null;
     try {
-
-      RestClient restClient = new RestClient();
+      
+      //RestClient restClient = new RestClient();
 
       String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
           + uriRefFragment + schemaETag + uriRowsFragment;
@@ -1308,15 +1802,41 @@ public class WinkClient {
         agg_uri = agg_uri + queryParamCursor + cursor;
       }
 
-      Resource tableResource = restClient.resource(agg_uri);
+      //Resource tableResource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
       System.out.println("getRows: agg uri is " + agg_uri);
 
-      String tableRes = tableResource.accept("application/json").get(String.class);
+      //String tableRes = tableResource.accept("application/json").get(String.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String tableRes = strLine.toString();
+      
       obj = new JSONObject(tableRes);
       System.out.println("getRows: result for " + tableId + " is " + obj.toString());
 
     } catch (Exception e) {
       e.printStackTrace();
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
     return obj;
   }
@@ -1348,9 +1868,8 @@ public class WinkClient {
     	System.out.println("writeRowDataToCSV: There are no rows to write out!");
     	return;
     }
-
+    
     File file = new File(csvFilePath);
-    file.getParentFile().mkdirs();
     if (!file.exists()) {
       file.createNewFile();
     }
@@ -1463,18 +1982,50 @@ public class WinkClient {
   public JSONObject getRow(String uri, String appId, String tableId, String schemaETag, String rowId)
       throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
-
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId;
-    System.out.println("getRow: agg uri is " + agg_uri);
-    Resource tableResource = restClient.resource(agg_uri);
-
-    String tableRes = tableResource.accept("application/json").get(String.class);
-    obj = new JSONObject(tableRes);
-    System.out.println("getRow: result for table " + tableId + " row " + rowId + " is "
-        + obj.toString());
+    HttpGet request = null;
+    try {
+      //RestClient restClient = new RestClient();
+  
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId;
+      System.out.println("getRow: agg uri is " + agg_uri);
+      //Resource tableResource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+  
+      //String tableRes = tableResource.accept("application/json").get(String.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String tableRes = strLine.toString();
+      
+      obj = new JSONObject(tableRes);
+      System.out.println("getRow: result for table " + tableId + " row " + rowId + " is "
+          + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return obj;
   }
@@ -1521,20 +2072,52 @@ public class WinkClient {
   public JSONObject getManifestForRow(String uri, String appId, String tableId, String schemaETag,
       String rowId) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
         + uriRefFragment + schemaETag + uriAttachmentsFragment + rowId + uriManifestFragment;
     System.out.println("getManifestForRow: agg uri is " + agg_uri);
 
-    Resource resource = restClient.resource(agg_uri);
+    //Resource resource = restClient.resource(agg_uri);
+    request = new HttpGet(agg_uri);
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
 
-    String res = resource.accept("application/json").contentType("application/json").get(String.class);
+    //String res = resource.accept("application/json").contentType("application/json").get(String.class);
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
+    
     obj = new JSONObject(res);
     
     System.out.println("getManifestForRow: result for " + tableId + " with rowId " + rowId + " is "
         + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
 
     return obj;
   }
@@ -1681,7 +2264,7 @@ public class WinkClient {
 
       if (processedRowArrayList.size() >= batchSize) {
         dataETag = getTableDataETag(uri, appId, tableId);
-        bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
+        bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, false);
 
         processedRowArrayList = new ArrayList<Row>();
       }
@@ -1689,7 +2272,7 @@ public class WinkClient {
 
     if (processedRowArrayList.size() > 0) {
       dataETag = getTableDataETag(uri, appId, tableId);
-      bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, true);
+      bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, false);
     }
   }
   
@@ -1783,7 +2366,7 @@ public class WinkClient {
 
       if (rowArrayList.size() >= batchSize) {
         dataETag = getTableDataETag(uri, appId, tableId);
-        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
 
         rowArrayList = new ArrayList<Row>();
       }
@@ -1791,7 +2374,7 @@ public class WinkClient {
 
     if (rowArrayList.size() > 0) {
       dataETag = getTableDataETag(uri, appId, tableId);
-      bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+      bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
     }
   }
    
@@ -1914,26 +2497,12 @@ public class WinkClient {
         }
   
         Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
-        // System.out.println("row read: " + row.toString());
-  
-        // String jsonRow = mapper.writeValueAsString(row);
-        // System.out.println("");
-        // System.out.println("object mapper outpput for row:        " + jsonRow);
-        // RowResource tempRow = new RowResource(row);
-        // String jsonTempRow = mapper.writeValueAsString(tempRow);
-        // System.out.println("object mapper output for rowResource:" +
-        // jsonTempRow);
-        // System.out.println("");
   
         rowArrayList.add(row);
-        // System.out.println("rowResourceArrayList size is " +
-        // rowArrayList.size());
-        // rowObj = this.mapRowToJSONObject(row);
-        // rowsArray.add(rowObj);
   
         if (rowArrayList.size() >= batchSize) {
           dataETag = getTableDataETag(uri, appId, tableId);
-          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
   
           rowArrayList = new ArrayList<Row>();
         }
@@ -1942,7 +2511,7 @@ public class WinkClient {
   
       if (rowArrayList.size() > 0) {
         dataETag = getTableDataETag(uri, appId, tableId);
-        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -1952,35 +2521,72 @@ public class WinkClient {
   private RowOutcomeList bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId, String dataETag, 
       boolean print) throws JsonProcessingException, UnsupportedEncodingException, IOException,
       ClientProtocolException, JSONException {
-    System.out.println("Entering send");
-    RowList rowList = new RowList();
     RowOutcomeList outcome = null;
-    rowList.setRows(rowArrayList);
-    
-    if (dataETag != null && !dataETag.isEmpty()) {
-      rowList.setDataETag(dataETag);      
+ 
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
     }
-    
-    ObjectMapper mapper = new ObjectMapper();
-    String rowRes = mapper.writeValueAsString(rowList);
-    
-    System.out.println("agg_uri is " + agg_uri);
-    System.out.println("Params for request: " + rowRes);
-    
-    RestClient restClient = new RestClient();
-    Resource resource = restClient.resource(agg_uri);
-    String res = resource.accept("application/json").contentType("application/json")
-        .put(String.class, rowRes);
-
-    System.out.println("bulkRowsSender: result is for tableId " + tableId + " is " + res);
-    
     if (print) {
-      System.out.println("bulkRowsSender: result with tableId " + tableId + " is "
-          + res);
+      System.out.println("Entering send"); 
     }
-    System.out.println("Exiting send");
 
-    outcome = mapper.readValue(res, RowOutcomeList.class);
+    HttpPut request = null;
+    try {
+      RowList rowList = new RowList();
+      rowList.setRows(rowArrayList);
+      
+      if (dataETag != null && !dataETag.isEmpty()) {
+        rowList.setDataETag(dataETag);      
+      }
+      
+      ObjectMapper mapper = new ObjectMapper();
+      String rowRes = mapper.writeValueAsString(rowList);
+      
+      System.out.println("agg_uri is " + agg_uri);
+      System.out.println("Params for request: " + rowRes);
+      
+      //RestClient restClient = new RestClient();
+  
+      //Resource resource = restClient.resource(agg_uri);
+      request = new HttpPut(agg_uri);
+      StringEntity params = new StringEntity(rowRes, "UTF-8");
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      request.setEntity(params);
+      
+      //String res = resource.accept("application/json").contentType("application/json")
+      //    .put(String.class, rowRes);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+      
+      if (print) {
+        System.out.println("bulkRowsSender: result with tableId " + tableId + " is "
+            + res);
+        
+        System.out.println("Exiting send");
+      }
+      
+      outcome = mapper.readValue(res, RowOutcomeList.class);
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
     
     return outcome;
   }
@@ -2028,7 +2634,7 @@ public class WinkClient {
 
         if (processedRowArrayList.size() >= batchSize) {
           dataETag = getTableDataETag(uri, appId, tableId);
-          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
 
           processedRowArrayList = new ArrayList<Row>();
         }
@@ -2036,7 +2642,7 @@ public class WinkClient {
 
       if (processedRowArrayList.size() > 0) {
         dataETag = getTableDataETag(uri, appId, tableId);
-        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
     
     } catch (Exception e) {
@@ -2090,7 +2696,7 @@ public class WinkClient {
 
         if (processedRowArrayList.size() >= batchSize) {
           dataETag = getTableDataETag(uri, appId, tableId);
-          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+          bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
 
           processedRowArrayList = new ArrayList<Row>();
         }
@@ -2098,7 +2704,7 @@ public class WinkClient {
 
       if (processedRowArrayList.size() > 0) {
         dataETag = getTableDataETag(uri, appId, tableId);
-        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+        bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
     
     } catch (Exception e) {
@@ -2147,7 +2753,7 @@ public class WinkClient {
       }
 
       if (processedRowArrayList.size() > 0) {
-        outcome = bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, true);
+        outcome = bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
     
     } catch (Exception e) {
@@ -2178,6 +2784,10 @@ public class WinkClient {
       throws Exception {
 	// There can be multiple files per row
 	// Relative path is valid for rows
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 	  
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("getFileForRow: uri cannot be null");
@@ -2191,42 +2801,63 @@ public class WinkClient {
       throw new IllegalArgumentException("getFileForRow: relativePathOnServer cannot be null");
     }
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
-        + relativePathOnServer;
-
-    if (asAttachment) {
-      agg_uri = agg_uri + uriAsAttachmentFragment;
+    HttpGet request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
+          + relativePathOnServer;
+  
+      if (asAttachment) {
+        agg_uri = agg_uri + uriAsAttachmentFragment;
+      }
+  
+      System.out.println("getFileForRow: agg_uri is " + agg_uri);
+  
+      File file = new File(pathToSaveFile);
+      file.getParentFile().mkdirs();
+      if (!file.exists()) {
+        file.createNewFile();
+      }
+  
+      // create the rest client instance
+      //RestClient client = new RestClient();
+  
+      // create the resource instance to interact with
+      //Resource resource = client.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      System.out.println("getFileForRow: agg_uri is " + agg_uri);
+  
+      String accept = determineContentType(file.getName());
+      request.addHeader("content-type", accept + "; charset=utf-8");
+      request.addHeader("accept", accept);
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      //InputStream fis = resource.accept(accept).get(InputStream.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      System.out.println("getFileForRow: issued get request for " + relativePathOnServer);
+      
+      InputStream fis = response.getEntity().getContent();
+  
+      FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
+      byte[] buffer = new byte[1024];
+      int len;
+      while ((len = fis.read(buffer)) > 0) {
+        fos.write(buffer, 0, len);
+      }
+  
+      fos.close();
+      fis.close();
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
-
-    System.out.println("getFileForRow: agg_uri is " + agg_uri);
-
-    File file = new File(pathToSaveFile);
-    file.getParentFile().mkdirs();
-    if (!file.exists()) {
-      file.createNewFile();
-    }
-
-    // create the rest client instance
-    RestClient client = new RestClient();
-
-    // create the resource instance to interact with
-    Resource resource = client.resource(agg_uri);
-    System.out.println("getFileForRow: agg_uri is " + agg_uri);
-
-    String accept = determineContentType(file.getName());
-    InputStream fis = resource.accept(accept).get(InputStream.class);
-    System.out.println("getFileForRow: issued get request for " + relativePathOnServer);
-
-    FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
-    byte[] buffer = new byte[1024];
-    int len;
-    while ((len = fis.read(buffer)) > 0) {
-      fos.write(buffer, 0, len);
-    }
-
-    fos.close();
-    fis.close();
   }
 
   /**
@@ -2257,38 +2888,60 @@ public class WinkClient {
       throw new IllegalArgumentException("putFileForRow: relativePathOnServer cannot be null");
     }
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
-        + relativePathOnServer;
-    System.out.println("putFileForRow: agg_uri is " + agg_uri);
-
-    File file = new File(wholePathToFile);
-    if (!file.exists()) {
-      System.out.println("putFileForRow: file " + wholePathToFile + " does not exist");
-      throw new IllegalArgumentException("putFileForRow: wholePathToFile cannot be null");
+    HttpPost request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
+          + relativePathOnServer;
+      System.out.println("putFileForRow: agg_uri is " + agg_uri);
+  
+      File file = new File(wholePathToFile);
+      if (!file.exists()) {
+        System.out.println("putFileForRow: file " + wholePathToFile + " does not exist");
+        throw new IllegalArgumentException("putFileForRow: wholePathToFile cannot be null");
+      }
+  
+      //InputStream in = new FileInputStream(file);
+      byte[] data = Files.readAllBytes(file.toPath());
+  
+      // create the rest client instance
+      //RestClient client = new RestClient();
+  
+      // create the resource instance to interact with
+      //Resource resource = client.resource(agg_uri);
+      request = new HttpPost(agg_uri);
+      
+      // issue the request
+      String contentType = this.determineContentType(file.getName());
+      //InputStream response = resource.contentType(contentType).accept(contentType)
+      //    .post(InputStream.class, in);
+      request.addHeader("content-type", contentType + "; charset=utf-8");
+      request.addHeader("accept", contentType);
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      System.out.println("putFileForRow: response for file " + wholePathToFile + " is ");
+      
+      HttpEntity entity = new ByteArrayEntity(data);
+      request.setEntity(entity);
+      
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+  
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+      String line;
+      while ((line = responseBuff.readLine()) != null)
+        System.out.println(line);
+      
+      //in.close();
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
-
-    InputStream in = new FileInputStream(file);
-
-    // create the rest client instance
-    RestClient client = new RestClient();
-
-    // create the resource instance to interact with
-    Resource resource = client.resource(agg_uri);
-
-    // issue the request
-    String contentType = this.determineContentType(file.getName());
-    InputStream response = resource.contentType(contentType).accept(contentType)
-        .post(InputStream.class, in);
-    System.out.println("putFileForRow: response for file " + wholePathToFile + " is ");
-
-    BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response));
-    String line;
-    while ((line = responseBuff.readLine()) != null)
-      System.out.println(line);
-    in.close();
-
-    return;
   }
   
   /**
@@ -2315,12 +2968,18 @@ public class WinkClient {
   public JSONObject queryRowsInTimeRangeWithLastUpdateDate(String uri, String appId, String tableId, String schemaETag,
       String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
     if (startTime == null || startTime.isEmpty()) {
       throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
     }
     
-    RestClient restClient = new RestClient();
+    HttpGet request = null;
+    try {
+    //RestClient restClient = new RestClient();
 
     String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
         + uriRefFragment + schemaETag + uriQueryFragment + uriLastUpdateDateFragment;
@@ -2339,13 +2998,39 @@ public class WinkClient {
       agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
     }
 
-    Resource tableResource = restClient.resource(agg_uri);
+    //Resource tableResource = restClient.resource(agg_uri);
+    request = new HttpGet(agg_uri);
+    request.addHeader("content-type", "application/json; charset=utf-8");
+    request.addHeader("accept", "application/json");
+    request.addHeader("accept-charset", "utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
     System.out.println("queryRowsInTimeRangeWithLastUpdateDate: agg uri is " + agg_uri);
 
-    String tableRes = tableResource.accept("application/json").get(String.class);
+    //String tableRes = tableResource.accept("application/json").get(String.class);
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent()));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String tableRes = strLine.toString();
+    
     obj = new JSONObject(tableRes);
     System.out.println("queryRowsInTimeRangeWithLastUpdateDate: result for " + tableId + " is " + obj.toString());
-
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+    
     return obj;
   }
     
@@ -2373,38 +3058,75 @@ public class WinkClient {
   public JSONObject queryRowsInTimeRangeWithSavepointTimestamp(String uri, String appId, String tableId, String schemaETag,
       String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
     JSONObject obj = null;
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
 
     if (startTime == null || startTime.isEmpty()) {
       throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
     }
     
-    RestClient restClient = new RestClient();
-
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriQueryFragment + uriSavepointTimestamp;
-    
-    agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
-    
-    if (endTime != null && !endTime.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
+    HttpGet request = null;
+    try {
+      //RestClient restClient = new RestClient();
+  
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriQueryFragment + uriSavepointTimestamp;
+      
+      agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
+      
+      if (endTime != null && !endTime.isEmpty()) {
+        agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
+      }
+  
+      if (cursor != null && !cursor.isEmpty()) {
+        agg_uri = agg_uri + "&" + queryParamCursor + cursor;
+      }
+  
+      if (fetchLimit != null && !fetchLimit.isEmpty()) {
+        agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
+      }
+  
+      //Resource tableResource = restClient.resource(agg_uri);
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
+  
+      //String tableRes = tableResource.accept("application/json").get(String.class);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent()));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String tableRes = strLine.toString();
+      
+      obj = new JSONObject(tableRes);
+      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId + " is " + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
     }
-
-    if (cursor != null && !cursor.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamCursor + cursor;
-    }
-
-    if (fetchLimit != null && !fetchLimit.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
-    }
-
-    Resource tableResource = restClient.resource(agg_uri);
-    System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
-
-    String tableRes = tableResource.accept("application/json").get(String.class);
-    obj = new JSONObject(tableRes);
-    System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId + " is " + obj.toString());
-
     return obj;
   }
-
+  
+  @SuppressWarnings("deprecation")
+  public void close() {
+    if (httpClient != null) {
+      httpClient.close();
+    }
+  }
 }
