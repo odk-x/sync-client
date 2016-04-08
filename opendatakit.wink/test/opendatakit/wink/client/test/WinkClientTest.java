@@ -35,23 +35,6 @@ public class WinkClientTest extends TestCase {
   String userName;
   String password;
   int batchSize;
-  
-  //String agg_url = "https://clarlars.appspot.com";
-  //String agg_url = "https://odk-test-area.appspot.com";
-  //String appId = "odktables/tables";
-  //String absolutePathOfTestFiles = "testfiles/test/";
-  //int batchSize = 1000;
-
-  //String agg_url = "http://carcoal.cs.washington.edu:8888/odktables/odktables";
-  //String agg_url = "http://146.148.49.96/odktables";
-
-  //String agg_url = "http://146.148.34.74:8080/dataservice/odktables";
-  //String agg_url = "http://146.148.34.74:8080/odktables/odktables";
-
-  //String agg_url = "http://107.178.213.121:8080/odktables";
-  //String appId = "mezuri-10100233";
-  
-  //String host = "clarlars-test.appspot.com";
 
   /*
    * Perform setup for test if necessary
@@ -64,16 +47,12 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    //agg_url = "https://clarlars.appspot.com";
-    //agg_url = "https://clarlars-test.appspot.com";
-    agg_url = "https://odk-test-area.appspot.com";
-    //agg_url = "https://test-agg.appspot.com";
+    agg_url = "https://test.appspot.com";
     appId = "odktables/tables";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
-    userName = "clarice";
-    //password = "clariceisAWESOME";
-    password = "aggregate";
+    userName = "user";
+    password = "pass";
     URL url = new URL(agg_url);
     host = url.getHost();
   }
@@ -2152,6 +2131,47 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testGetFileForRowWithValidBinaryFile_ExpectPass: expected pass");
     }
   }
+  
+//  /**
+//   * Test batchGetFilesForRow
+//   * TBD - this is a temporary test until test aggregate instances
+//   * can be upgraded - this will need to be completely restructured!!
+//   */
+//  public void testBatchGetFileForRowWithValidBinaryFiles_ExpectPass() {
+//	// Using a table that we know exists until aggregate can be upgraded  
+//	String testTableId = "scan_TB03_Register1";
+//
+//    // manufacture a rowId for this record...
+//    //String RowId = "uuid:" + UUID.randomUUID().toString();
+//	
+//	// Using a row that we know exists until test aggregate instance
+//	// has been udpated
+//    String RowId = "uuid:937ade0c-ef3c-48eb-920e-6c1c3dd1a624";
+//    
+//    //S tring tableSchemaETag = null;
+//	// Using a tableSchemaETag that we know exists until test aggregate instance
+//	// has been udpated
+//    String tableSchemaETag = "uuid:4f38d926-274a-4468-bf8f-3d1c8e8822d4";
+//
+//    String pathToSaveFile = absolutePathOfTestFiles + "downloadInstance";
+//
+//    try {
+//      WinkClient wc = new WinkClient();
+//      wc.init(host, userName, password);
+//
+//      // Get the list of files
+//      JSONObject filesToGetObj = wc.getManifestForRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+//      
+//      // Download files into pathToSaveFile 
+//      wc.batchGetFilesForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, pathToSaveFile, filesToGetObj, 0);
+//	      
+//      wc.close();
+//
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//      TestCase.fail("testBatchGetFileForRowWithValidBinaryFiles_ExpectPass: expected pass");
+//    }
+//  }
   
   public void testWriteRowDataToCSVWithLotsOfRows_ExpectPass() {
     String testTableId = "test21";

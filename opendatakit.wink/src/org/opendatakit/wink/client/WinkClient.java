@@ -1,5 +1,6 @@
 package org.opendatakit.wink.client;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -8,7 +9,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,8 +22,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.zip.DataFormatException;
 
+import org.apache.http.Header;
+import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -61,6 +67,7 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
 import org.opendatakit.aggregate.odktables.rest.entity.Scope;
+import org.apache.commons.fileupload.MultipartStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,6 +111,8 @@ public class WinkClient {
   public static String uriAttachmentsFragment = "/attachments/";
 
   public static String uriFileFragment = "/file/";
+  
+  public static String downloadFragment = "/download";
 
   public static String uriManifestFragment = "/manifest";
 
@@ -178,6 +187,12 @@ public class WinkClient {
   public static String orderedColumnsDef = "orderedColumns";
   
   public static String defaultFetchLimit = "1000";
+  
+  public static String BOUNDARY = "boundary";
+  
+  public static String multipartFileHeader = "filename=\"";
+  
+  public static int MAX_BATCH_SIZE = 10485760;
 
   private DefaultHttpClient httpClient = null;
 
@@ -2854,6 +2869,259 @@ public class WinkClient {
       fos.close();
       fis.close();
     } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+  }
+  
+  /**
+   * Get a batch of file attachments and save them to 
+   * specified files for a given row of a
+   * table.   
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param userRowId the unique identifier for a row
+   * @param dirToSaveFiles file path in which to save the attachments
+   * @param filesToGet JSONObject of files - same structure as returned in getManifestForRow
+   * @param batchSizeInBytes the number of bytes to transfer in a batch default is 10MB
+   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   */
+  public void batchGetFilesForRow(String uri, String appId, String tableId, String schemaETag,
+	      String userRowId, String dirToSaveFiles, JSONObject filesToGet, int batchSizeInBytes)
+	      throws Exception {
+
+    int batchSizeToUse = MAX_BATCH_SIZE;  
+	  
+	if (httpClient == null) {
+	  throw new IllegalStateException("The initialization function must be called");
+	}
+	  	  
+	if (uri == null || uri.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: uri cannot be null");
+	}
+	      
+	if (appId == null || appId.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: appId cannot be null");
+	}
+	      
+	if (tableId == null || tableId.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: tableId cannot be null");
+	}
+	      
+	if (schemaETag == null || schemaETag.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: schemaETag cannot be null");
+	}
+	      
+	if (userRowId == null || userRowId.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: userRowId cannot be null");
+	}
+
+	if (dirToSaveFiles == null || dirToSaveFiles.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: dirToSaveFiles cannot be null");
+	}
+	      
+	if (filesToGet == null || filesToGet.isEmpty()) {
+	  throw new IllegalArgumentException("batchGetFilesForRow: filesToGet cannot be null");
+	}
+	    
+    if (batchSizeInBytes > 0 && batchSizeInBytes < MAX_BATCH_SIZE) {
+	  batchSizeToUse = batchSizeInBytes;	
+	}
+    
+    JSONArray totalFiles = filesToGet.getJSONArray("files");
+
+    JSONArray batchFilesArray = new JSONArray();
+
+    int batchSize = 0;
+    for (int i = 0; i < totalFiles.length(); i++) {
+      JSONObject file = totalFiles.getJSONObject(i);
+      batchSize += file.getInt("contentLength");
+      batchFilesArray.add(file);
+      
+      if (batchSize >= batchSizeToUse) {
+    	JSONObject batchFiles = new JSONObject();
+    	batchFiles.put("files", batchFilesArray);
+        downloadBatchForRow(uri, appId, tableId, schemaETag,
+          userRowId, dirToSaveFiles, batchFiles); 
+        batchSize = 0;
+        batchFilesArray.clear();
+      }
+    }
+    
+    if (batchSize > 0) {
+      JSONObject batchFiles = new JSONObject();
+      batchFiles.put("files", batchFilesArray);
+      downloadBatchForRow(uri, appId, tableId, schemaETag,userRowId, dirToSaveFiles, batchFiles); 	
+    } 
+  }
+  
+  /**
+   * Get a batch of file attachments and save them to 
+   * specified files for a given row of a
+   * table.   
+   * 
+   * @param uri the url for the server
+   * @param appId identifies the application
+   * @param tableId the table identifier or name
+   * @param schemaETag identifies an instance of the table
+   * @param userRowId the unique identifier for a row
+   * @param dirToSaveFiles file path in which to save the attachments
+   * @param filesToGet JSONObject of files - same structure as returned in getManifestForRow
+   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   */
+  public void downloadBatchForRow(String uri, String appId, String tableId, String schemaETag,
+      String userRowId, String dirToSaveFiles, JSONObject filesToGet)
+      throws Exception {
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+	  
+    if (uri == null || uri.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: uri cannot be null");
+    }
+    
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: appId cannot be null");
+    }
+    
+    if (tableId == null || tableId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: tableId cannot be null");
+    }
+    
+    if (schemaETag == null || schemaETag.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: schemaETag cannot be null");
+    }
+    
+    if (userRowId == null || userRowId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: userRowId cannot be null");
+    }
+
+    if (dirToSaveFiles == null || dirToSaveFiles.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: dirToSaveFiles cannot be null");
+    }
+    
+    if (filesToGet == null || filesToGet.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: filesToGet cannot be null");
+    }
+
+    HttpPost request = null;
+    try {
+      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
+          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + downloadFragment;
+  
+      System.out.println("batchGetFilesForRow: agg_uri is " + agg_uri);
+  
+      // create the rest client instance
+      //RestClient client = new RestClient();
+  
+      // create the resource instance to interact with
+      //Resource resource = client.resource(agg_uri);
+      request = new HttpPost(agg_uri);
+  
+      // Takes json by default - just put a dummy file here for now
+      String accept = determineContentType("test.json");
+      
+      // TBD: Make constants for this!!
+      request.addHeader("content-type", accept + "; charset=utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
+      StringEntity params = new StringEntity(filesToGet.toString(), "UTF-8");
+      request.setEntity(params);
+      
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+      
+      System.out.println("batchGetFilesForRow: client response is " + response.getStatusLine().getStatusCode() + ":" +
+              response.getStatusLine().getReasonPhrase());
+      
+      if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() >= 300) {
+        return;
+      }
+      
+      String boundaryVal = null;
+      Header hdr = response.getEntity().getContentType();
+      HeaderElement[] hdrElem = hdr.getElements();
+      for (HeaderElement elm : hdrElem) {
+    	int cnt = elm.getParameterCount();
+    	for (int i = 0; i < cnt; i++) {
+    	  NameValuePair nvp = elm.getParameter(i);
+    	  String nvp_name = nvp.getName();
+          String nvp_value = nvp.getValue();
+    	  if (nvp_name.equals(BOUNDARY)) {
+            boundaryVal = nvp_value;
+            break;
+    	  }
+    	}
+      }
+      
+      // Best to return at this point if we can't
+      // determine the boundary to parse the multi-part form
+      if (boundaryVal == null) {
+        return;	  
+      }
+      
+      InputStream inStream = response.getEntity().getContent();
+      
+      @SuppressWarnings("deprecation")
+      byte[] msParam = boundaryVal.getBytes(Charset.forName("UTF-8"));
+      MultipartStream multipartStream = new MultipartStream(inStream, msParam);
+
+      OutputStream os = null;
+      
+      // Parse the request
+      boolean nextPart = multipartStream.skipPreamble();
+      while (nextPart) {
+        String header = multipartStream.readHeaders();
+        System.out.println("Headers: " + header);
+        
+        // Get the file name 
+        int firstIndex = header.indexOf(multipartFileHeader) + multipartFileHeader.length();
+        int lastIndex = header.lastIndexOf("\"");
+        String instFileName = header.substring(firstIndex, lastIndex);
+        
+        File instFile = new File(dirToSaveFiles + File.separator + instFileName);
+        instFile.getParentFile().mkdirs();
+        if (!instFile.exists()) {
+          instFile.createNewFile();
+        }
+        
+        try {
+          os = new BufferedOutputStream(new FileOutputStream(instFile));
+        	
+          multipartStream.readBodyData(os);
+          os.flush();
+          os.close();
+          os = null;
+        } catch (IOException e) {
+          e.printStackTrace();
+          System.out.println("batchGetFilesForRow: Download file batches: Unable to read attachment");
+          return;
+        } finally {
+          if (os != null) {
+            try {
+              os.close();
+            } catch (IOException e) {
+              e.printStackTrace();
+              System.out.println("batchGetFilesForRow: Download file batches: Error closing output stream");
+            }
+          }
+        }
+        nextPart = multipartStream.readBoundary();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }finally {
       if (request != null) {
         request.releaseConnection();
       }
