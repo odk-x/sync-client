@@ -2139,19 +2139,19 @@ public class WinkClientTest extends TestCase {
 //   */
 //  public void testBatchGetFileForRowWithValidBinaryFiles_ExpectPass() {
 //	// Using a table that we know exists until aggregate can be upgraded  
-//	String testTableId = "scan_TB03_Register1";
+//	String testTableId = "test";
 //
 //    // manufacture a rowId for this record...
 //    //String RowId = "uuid:" + UUID.randomUUID().toString();
 //	
 //	// Using a row that we know exists until test aggregate instance
-//	// has been udpated
-//    String RowId = "uuid:937ade0c-ef3c-48eb-920e-6c1c3dd1a624";
+//	// has been updated
+//    String RowId = "test";
 //    
 //    //S tring tableSchemaETag = null;
 //	// Using a tableSchemaETag that we know exists until test aggregate instance
 //	// has been udpated
-//    String tableSchemaETag = "uuid:4f38d926-274a-4468-bf8f-3d1c8e8822d4";
+//    String tableSchemaETag = "test";
 //
 //    String pathToSaveFile = absolutePathOfTestFiles + "downloadInstance";
 //
