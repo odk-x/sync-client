@@ -48,12 +48,12 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "https://linl33-aggregate.appspot.com";
+    agg_url = "https://test.appspot.com";
     appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
-    userName = "linlee";
-    password = "linlee";
+    userName = "";
+    password = "";
     URL url = new URL(agg_url);
     host = url.getHost();
     version = 2;
