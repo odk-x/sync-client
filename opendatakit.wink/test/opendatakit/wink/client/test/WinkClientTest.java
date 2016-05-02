@@ -35,6 +35,7 @@ public class WinkClientTest extends TestCase {
   String userName;
   String password;
   int batchSize;
+  int version;
 
   /*
    * Perform setup for test if necessary
@@ -47,14 +48,15 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "https://test.appspot.com";
-    appId = "odktables/tables";
+    agg_url = "https://linl33-aggregate.appspot.com";
+    appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
-    userName = "user";
-    password = "pass";
+    userName = "linlee";
+    password = "linlee";
     URL url = new URL(agg_url);
     host = url.getHost();
+    version = 2;
   }
 
   /*
@@ -78,7 +80,7 @@ public class WinkClientTest extends TestCase {
 
     try {
       wc.init(host, userName, password);
-      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       JSONArray files = obj.getJSONArray("files");
 
       for (int i = 0; i < files.size(); i++) {
@@ -102,7 +104,7 @@ public class WinkClientTest extends TestCase {
 
 	    try {
 	      wc.init(host, userName, password);
-	      JSONObject obj = wc.getManifestForTableId(agg_url, appId, tableId);
+	      JSONObject obj = wc.getManifestForTableId(agg_url, appId, tableId, version);
 	      JSONArray files = obj.getJSONArray("files");
 
 	      for (int i = 0; i < files.size(); i++) {
@@ -323,7 +325,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Make sure that the file is on the server
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -331,7 +333,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(foundFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -359,7 +361,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Make sure that the file is on the server
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -367,7 +369,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(foundFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -433,7 +435,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.uploadFile(null, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(null, appId, testFile, relativeTestFilePath, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -460,7 +462,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.uploadFile(agg_url, appId, null, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, null, relativeTestFilePath, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -488,7 +490,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.uploadFile(agg_url, appId, testFile, null);
+      wc.uploadFile(agg_url, appId, testFile, null, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -518,10 +520,10 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Get the file off of the server
-      wc.downloadFile(agg_url, appId, dowloadTestFile, relativeTestFilePath);
+      wc.downloadFile(agg_url, appId, dowloadTestFile, relativeTestFilePath, version);
 
       // Check the data from the two files are the same
       sameFile = checkThatTwoFilesAreTheSame(testFile, dowloadTestFile);
@@ -529,7 +531,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(sameFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -562,10 +564,10 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Get the file off of the server
-      wc.downloadFile(agg_url, appId, dowloadTestFile, relativeTestFilePath);
+      wc.downloadFile(agg_url, appId, dowloadTestFile, relativeTestFilePath, version);
 
       // Check that the data from the two files are the same
       sameFile = checkThatTwoFilesAreTheSame(testFile, dowloadTestFile);
@@ -573,7 +575,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(sameFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -605,7 +607,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.downloadFile(null, appId, testFile, relativeTestFilePath);
+      wc.downloadFile(null, appId, testFile, relativeTestFilePath, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -633,7 +635,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.downloadFile(agg_url, appId, null, relativeTestFilePath);
+      wc.downloadFile(agg_url, appId, null, relativeTestFilePath, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -661,7 +663,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.downloadFile(agg_url, appId, testFile, null);
+      wc.downloadFile(agg_url, appId, testFile, null, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -688,7 +690,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Check that the server has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -696,7 +698,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(foundFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -726,7 +728,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Check that the file is on the server
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -734,7 +736,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(foundFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -764,7 +766,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.deleteFile(null, appId, relativeTestFilePath);
+      wc.deleteFile(null, appId, relativeTestFilePath, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -791,7 +793,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Check the data from the file
-      wc.deleteFile(agg_url, appId, null);
+      wc.deleteFile(agg_url, appId, null, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -820,10 +822,10 @@ public class WinkClientTest extends TestCase {
       // Put the file on the server
       //wc.init();
       wc.init(host, userName, password);
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Test the manifest
-      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       JSONArray files = obj.getJSONArray("files");
 
       for (int i = 0; i < files.size(); i++) {
@@ -838,7 +840,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(foundFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -867,7 +869,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Test the manifest
-      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       JSONArray files = obj.getJSONArray("files");
 
       for (int i = 0; i < files.size(); i++) {
@@ -901,7 +903,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Test the manifest
-      wc.getManifestForAppLevelFiles(null, appId);
+      wc.getManifestForAppLevelFiles(null, appId, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -926,7 +928,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Test the manifest
-      wc.getManifestForAppLevelFiles(null, appId);
+      wc.getManifestForAppLevelFiles(null, appId, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -956,10 +958,10 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath);
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Get the file off of the server
-      wc.getAllAppLevelFilesFromUri(agg_url, appId, dowloadTestDir);
+      wc.getAllAppLevelFilesFromUri(agg_url, appId, dowloadTestDir, version);
 
       // Check the data from the two files are the same
       sameFile = checkThatTwoFilesAreTheSame(testFile, downloadTestFile);
@@ -967,7 +969,7 @@ public class WinkClientTest extends TestCase {
       assertTrue(sameFile);
 
       // After we are done clean up the file
-      wc.deleteFile(agg_url, appId, relativeTestFilePath);
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
 
       // Make sure the server no longer has the file
       foundFile = checkThatFileExistsOnServer(wc, agg_url, appId, relativeTestFilePath);
@@ -995,7 +997,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Get the file off of the server
-      wc.getAllAppLevelFilesFromUri(null, appId, dowloadTestDir);
+      wc.getAllAppLevelFilesFromUri(null, appId, dowloadTestDir, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1021,7 +1023,7 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Get the file off of the server
-      wc.getAllAppLevelFilesFromUri(agg_url, appId, null);
+      wc.getAllAppLevelFilesFromUri(agg_url, appId, null, version);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -1188,7 +1190,7 @@ public class WinkClientTest extends TestCase {
   public void testCreateTableWithCSVAndValidData_ExpectPass() {
     String testTableId = "test3";
     String tableSchemaETag = null;
-    String csvFile = absolutePathOfTestFiles + "geoTaggerTest/definition.csv";
+    String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
 
     try {
       WinkClient wc = new WinkClient();
@@ -1228,7 +1230,7 @@ public class WinkClientTest extends TestCase {
   public void testCreateTableWithCSVInputStream_ExpectPass() {
     String testTableId = "test4";
     String tableSchemaETag = null;
-    String csvFile = absolutePathOfTestFiles + "geoTaggerTest/definition.csv";
+    String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
 
     try {
       WinkClient wc = new WinkClient();
@@ -3010,13 +3012,13 @@ public class WinkClientTest extends TestCase {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
 
-      wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom);
+      wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom, version);
       File fileDirToGetDataFrom = new File(dirToGetDataFrom);
       filesUploaded = wc.recurseDir(fileDirToGetDataFrom);
 
       File fileDirToPushDataFrom = new File(dirToPushDataFrom);
       deleteFolder(fileDirToPushDataFrom);
-      wc.getAllDataFromUri(agg_url, appId, dirToPushDataFrom);
+      wc.getAllDataFromUri(agg_url, appId, dirToPushDataFrom, version);
       filesDownloaded = wc.recurseDir(fileDirToPushDataFrom);
       
       // Remove any .DS_Store files
@@ -3046,14 +3048,14 @@ public class WinkClientTest extends TestCase {
         tableSchemaETag = result.getString("schemaETag");
       }
       
-      // Delete geoTagger from the server
+      // Delete geotagger from the server
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
       
       // Make sure the table is gone
       assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
       
       // Clean up all the files after 
-      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       JSONArray files = obj.getJSONArray("files");
 
       for (int i = 0; i < files.size(); i++) {
@@ -3061,11 +3063,11 @@ public class WinkClientTest extends TestCase {
         String fileName = file.getString("filename");
         
         // After we are done clean up the file
-        wc.deleteFile(agg_url, appId, fileName);
+        wc.deleteFile(agg_url, appId, fileName, version);
       }
       
       // Make sure that all app level files are gone 
-      obj = wc.getManifestForAppLevelFiles(agg_url, appId);
+      obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       files = obj.getJSONArray("files");
       
       assertEquals(files.size(), 0);

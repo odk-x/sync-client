@@ -92,11 +92,11 @@ public class WinkClient {
 
   public static String t = "WinkClient";
 
-  public static String uriFilesFragment = "/files/1/";
+  public static String uriFilesFragment = "/files/";
 
   public static String uriTablesFragment = "/tables";
 
-  public static String uriManifest = "/manifest/1";
+  public static String uriManifest = "/manifest/";
   
   public static String uriLastUpdateDateFragment = "/lastUpdateDate";
   
@@ -395,12 +395,14 @@ public class WinkClient {
    * @param uri the url for the server
    * @param appId the application id 
    * @param dirToSaveDataTo the directory in which the data will be saved
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo) throws Exception {
+  public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo, int version)
+      throws Exception {
 
     // Get all App Level Files
-    getAllAppLevelFilesFromUri(uri, appId, dirToSaveDataTo);
+    getAllAppLevelFilesFromUri(uri, appId, dirToSaveDataTo, version);
 
     // Get all the Tables
     JSONObject tableRes = getTables(uri, appId);
@@ -412,7 +414,7 @@ public class WinkClient {
       String schemaETag = table.getString("schemaETag");
 
       // Get all Table Level Files
-      getAllTableLevelFilesFromUri(uri, appId, tableId, dirToSaveDataTo);
+      getAllTableLevelFilesFromUri(uri, appId, tableId, dirToSaveDataTo, version);
 
       // Write out Table Definition CSV's
       String tableDefinitionCSVPath = dirToSaveDataTo + separator + "tables" + separator + tableId
@@ -495,10 +497,12 @@ public class WinkClient {
    * will be converted to 1f9e6f19_c50a_4436_9328_1d70cdb73493.
    * @param uri the url for the server
    * @param appId the application id 
-   * @param dirToGetDataFrom the directory that has the data to push to the server 
+   * @param dirToGetDataFrom the directory that has the data to push to the server
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom) throws Exception {
+  public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom, int version)
+      throws Exception {
     ArrayList<String> assetsFiles;
     ArrayList<String> tableFiles;
     ArrayList<String> tableIds;
@@ -563,7 +567,7 @@ public class WinkClient {
         } else {
           String filePath = tableFiles.get(j);
           String relativePathOnServer = filePath.substring(dirToGetDataFrom.length() + 1);
-          uploadFile(uri, appId, filePath, relativePathOnServer);
+          uploadFile(uri, appId, filePath, relativePathOnServer, version);
         }
       }
 
@@ -583,7 +587,7 @@ public class WinkClient {
     for (int i = 0; i < assetsFiles.size(); i++) {
       String filePath = assetsFiles.get(i);
       String relativePathOnServer = filePath.substring(dirToGetDataFrom.length() + 1);
-      uploadFile(uri, appId, filePath, relativePathOnServer);
+      uploadFile(uri, appId, filePath, relativePathOnServer, version);
     }
   }
 
@@ -648,22 +652,23 @@ public class WinkClient {
    * @param appId identifies the application
    * @param tableId the table identifier or name
    * @param dirToSaveDataTo the directory in which the data will be saved
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void getAllTableLevelFilesFromUri(String uri, String appId, String tableId,
-      String dirToSaveDataTo) throws Exception {
+      String dirToSaveDataTo, int version) throws Exception {
     String relativeDir;
     JSONObject file;
 
     // Get all table level files
-    JSONObject table = getManifestForTableId(uri, appId, tableId);
+    JSONObject table = getManifestForTableId(uri, appId, tableId, version);
     JSONArray tableLevelFiles = table.getJSONArray("files");
 
     for (int i = 0; i < tableLevelFiles.size(); i++) {
       file = tableLevelFiles.getJSONObject(i);
       relativeDir = file.getString("filename");
       String pathToSaveFile = dirToSaveDataTo + separator + relativeDir;
-      downloadFile(uri, appId, pathToSaveFile, relativeDir);
+      downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
 
@@ -674,22 +679,23 @@ public class WinkClient {
    * @param uri the url for the server
    * @param appId identifies the application
    * @param dirToSaveDataTo the directory in which the data will be saved
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void getAllAppLevelFilesFromUri(String uri, String appId, String dirToSaveDataTo)
-      throws Exception {
+  public void getAllAppLevelFilesFromUri(String uri, String appId, String dirToSaveDataTo,
+      int version) throws Exception {
     String relativeDir;
     JSONObject file;
 
     // Get all App Level Files
-    JSONObject app = getManifestForAppLevelFiles(uri, appId);
+    JSONObject app = getManifestForAppLevelFiles(uri, appId, version);
     JSONArray appLevelFiles = app.getJSONArray("files");
 
     for (int i = 0; i < appLevelFiles.size(); i++) {
       file = appLevelFiles.getJSONObject(i);
       relativeDir = file.getString("filename");
       String pathToSaveFile = dirToSaveDataTo + separator + relativeDir;
-      downloadFile(uri, appId, pathToSaveFile, relativeDir);
+      downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
 
@@ -699,10 +705,12 @@ public class WinkClient {
    * 
    * @param uri the url for the server
    * @param appId identifies the application
+   * @param version ODK version code, 1 or 2
    * @return JSONObject of the list of app level files
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public JSONObject getManifestForAppLevelFiles(String uri, String appId) throws Exception {
+  public JSONObject getManifestForAppLevelFiles(String uri, String appId, int version)
+      throws Exception {
     JSONObject obj = null;
     
     if (httpClient == null) {
@@ -712,7 +720,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
       //RestClient restClient = new RestClient();
-      String agg_uri = uri + separator + appId + uriManifest;
+      String agg_uri = uri + separator + appId + uriManifest + version;
       System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
       
       //Resource tableResource = restClient.resource(agg_uri);
@@ -762,10 +770,11 @@ public class WinkClient {
    * @param wholePathToFile the file path for the file to upload
    * @param relativePathOnServer the relative path on the server where
    * the file will be stored
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void uploadFile(String uri, String appId, String wholePathToFile,
-      String relativePathOnServer) throws Exception {
+      String relativePathOnServer, int version) throws Exception {
     
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -785,8 +794,10 @@ public class WinkClient {
 
     HttpPost request = null;
     try {
-      String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator, separator);
-      String agg_uri = uri + separator + appId + uriFilesFragment + uriRelativePath;
+      String uriRelativePath =
+          relativePathOnServer.replaceAll(File.separator + File.separator, separator);
+      String agg_uri =
+          uri + separator + appId + uriFilesFragment + version + separator + uriRelativePath;
       System.out.println("uploadFile: agg uri is " + agg_uri);
   
       File file = new File(wholePathToFile);
@@ -849,10 +860,11 @@ public class WinkClient {
    * @param pathToSaveFile the file path where the file should be downloaded
    * @param relativePathOnServer the relative path on the server where
    * the file is stored
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void downloadFile(String uri, String appId, String pathToSaveFile,
-      String relativePathOnServer) throws Exception {
+      String relativePathOnServer, int version) throws Exception {
 
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -872,7 +884,8 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
+      String agg_uri =
+          uri + separator + appId + uriFilesFragment + version + separator + relativePathOnServer;
       System.out.println("downloadFile: agg_uri is " + agg_uri);
   
       // File to save
@@ -931,9 +944,11 @@ public class WinkClient {
    * @param appId identifies the application
    * @param relativePathOnServer the relative path on the server where
    * the file is stored
+   * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered during this function
    */
-  public void deleteFile(String uri, String appId, String relativePathOnServer) throws Exception {
+  public void deleteFile(String uri, String appId, String relativePathOnServer, int version)
+      throws Exception {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: uri cannot be null");
     }
@@ -948,7 +963,8 @@ public class WinkClient {
     
     HttpDelete request = null;
     try {
-      String agg_uri = uri + separator + appId + uriFilesFragment + relativePathOnServer;
+      String agg_uri =
+          uri + separator + appId + uriFilesFragment + version + separator + relativePathOnServer;
       System.out.println("deleteFile: agg_uri is " + agg_uri);
   
       //RestClient restClient = new RestClient();
@@ -1606,10 +1622,11 @@ public class WinkClient {
    * @param uri the url for the server
    * @param appId identifies the application
    * @param tableId the table identifier or name
+   * @param version ODK version code, 1 or 2
    * @return a JSONObject with the list of table level files
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public JSONObject getManifestForTableId(String uri, String appId, String tableId)
+  public JSONObject getManifestForTableId(String uri, String appId, String tableId, int version)
       throws Exception {
     JSONObject obj = null;
 
@@ -1617,7 +1634,7 @@ public class WinkClient {
     try {
       //RestClient restClient = new RestClient();
   
-      String agg_uri = uri + separator + appId + uriManifest + separator + tableId;
+      String agg_uri = uri + separator + appId + uriManifest + version + separator + tableId;
       System.out.println("getManifestForTableId: agg uri is " + agg_uri);
   
       //Resource resource = restClient.resource(agg_uri);
