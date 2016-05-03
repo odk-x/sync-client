@@ -30,28 +30,22 @@ import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.auth.params.AuthPNames;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.params.AuthPolicy;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.client.params.CookiePolicy;
-import org.apache.http.client.params.HttpClientParams;
-import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-//import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.wink.json4j.JSONArray;
@@ -72,129 +66,136 @@ import org.apache.commons.fileupload.MultipartStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.config.SocketConfig;
+
 /**
- * This class is used to communicate with the ODK and Mezuri servers
- * via the REST API.  This class is responsible for uploading data 
- * to the server and downloading data from the server.  
+ * Class used to communicate with the ODK and Mezuri servers
+ * via the REST API.  This class uploads data 
+ * to the server and downloads data from the server.
+ *   
  * @author clarlars@gmail.com
  *
  */
 public class WinkClient {
-  public static String queryParamDataETag = "data_etag=";
+  public static final String queryParamDataETag = "data_etag=";
 
-  public static String queryParamFetchLimit = "fetchLimit=";
+  public static final String queryParamFetchLimit = "fetchLimit=";
 
-  public static String queryParamCursor = "cursor=";
+  public static final String queryParamCursor = "cursor=";
   
-  public static String queryParamStartTime = "startTime=";
+  public static final String queryParamStartTime = "startTime=";
   
-  public static String queryParamEndTime = "endTime=";
+  public static final String queryParamEndTime = "endTime=";
 
-  public static String t = "WinkClient";
+  public static final String t = "WinkClient";
 
-  public static String uriFilesFragment = "/files/1/";
+  public static final String uriFilesFragment = "/files/2/";
 
-  public static String uriTablesFragment = "/tables";
+  public static final String uriTablesFragment = "/tables";
 
-  public static String uriManifest = "/manifest/1";
+  public static final String uriManifest = "/manifest/2";
   
-  public static String uriLastUpdateDateFragment = "/lastUpdateDate";
+  public static final String uriLastUpdateDateFragment = "/lastUpdateDate";
   
-  public static String uriSavepointTimestamp = "/savepointTimestamp";
+  public static final String uriSavepointTimestamp = "/savepointTimestamp";
   
-  public static String uriQueryFragment = "/query";
+  public static final String uriQueryFragment = "/query";
 
-  public static String uriRefFragment = "/ref/";
+  public static final String uriRefFragment = "/ref/";
 
-  public static String uriRowsFragment = "/rows";
+  public static final String uriRowsFragment = "/rows";
 
-  public static String uriAttachmentsFragment = "/attachments/";
+  public static final String uriAttachmentsFragment = "/attachments/";
 
-  public static String uriFileFragment = "/file/";
+  public static final String uriFileFragment = "/file/";
   
-  public static String downloadFragment = "/download";
+  public static final String downloadFragment = "/download";
 
-  public static String uriManifestFragment = "/manifest";
+  public static final String uriManifestFragment = "/manifest";
 
-  public static String uriRowETagFragment = "?row_etag=";
+  public static final String uriRowETagFragment = "?row_etag=";
 
-  public static String uriAsAttachmentFragment = "?as_attachment=true";
+  public static final String uriAsAttachmentFragment = "?as_attachment=true";
 
-  public static String separator = "/";
+  public static final String separator = "/";
 
-  // CAL: Maybe better to have a function to map this?
-  public static String jsonElemKey = "elementKey";
+  // Maybe better to have a function to map this?
+  public static final String jsonElemKey = "elementKey";
 
-  public static String jsonElemName = "elementName";
+  public static final String jsonElemName = "elementName";
 
-  public static String jsonElemType = "elementType";
+  public static final String jsonElemType = "elementType";
 
-  public static String jsonListChildElemKeys = "listChildElementKeys";
+  public static final String jsonListChildElemKeys = "listChildElementKeys";
 
-  public static String tableDefElemKey = "_element_key";
+  public static final String tableDefElemKey = "_element_key";
 
-  public static String tableDefElemName = "_element_name";
+  public static final String tableDefElemName = "_element_name";
 
-  public static String tableDefElemType = "_element_type";
+  public static final String tableDefElemType = "_element_type";
 
-  public static String tableDefListChildElemKeys = "_list_child_element_keys";
+  public static final String tableDefListChildElemKeys = "_list_child_element_keys";
 
-  // CAL: Row definitions - mapping here?
-  public static String jsonId = "id";
+  // Row definitions - mapping here?
+  public static final String jsonId = "id";
 
-  public static String jsonFormId = "formId";
+  public static final String jsonFormId = "formId";
 
-  public static String jsonLocale = "locale";
+  public static final String jsonLocale = "locale";
 
-  public static String jsonSavepointType = "savepointType";
+  public static final String jsonSavepointType = "savepointType";
 
-  public static String jsonSavepointTimestamp = "savepointTimestamp";
+  public static final String jsonSavepointTimestamp = "savepointTimestamp";
 
-  public static String jsonSavepointCreator = "savepointCreator";
+  public static final String jsonSavepointCreator = "savepointCreator";
 
-  public static String jsonRowETag = "rowETag";
+  public static final String jsonRowETag = "rowETag";
 
-  public static String jsonRowsString = "rows";
+  public static final String jsonRowsString = "rows";
   
-  public static String jsonFilterScope = "filterScope";
+  public static final String jsonFilterScope = "filterScope";
   
-  public static String jsonTableId = "tableId";
+  public static final String jsonTableId = "tableId";
   
-  public static String jsonTables = "tables";
+  public static final String jsonTables = "tables";
   
-  public static String jsonSchemaETag = "schemaETag";
+  public static final String jsonSchemaETag = "schemaETag";
   
-  public static String jsonDataETag = "dataETag";
+  public static final String jsonDataETag = "dataETag";
 
-  public static String rowDefId = "_id";
+  public static final String rowDefId = "_id";
 
-  public static String rowDefFormId = "_form_id";
+  public static final String rowDefFormId = "_form_id";
 
-  public static String rowDefLocale = "_locale";
+  public static final String rowDefLocale = "_locale";
 
-  public static String rowDefSavepointType = "_savepoint_type";
+  public static final String rowDefSavepointType = "_savepoint_type";
 
-  public static String rowDefSavepointTimestamp = "_savepoint_timestamp";
+  public static final String rowDefSavepointTimestamp = "_savepoint_timestamp";
 
-  public static String rowDefSavepointCreator = "_savepoint_creator";
+  public static final String rowDefSavepointCreator = "_savepoint_creator";
 
-  public static String rowDefRowETag = "_row_etag";
+  public static final String rowDefRowETag = "_row_etag";
 
-  public static String rowDefFilterType = "_filter_type";
+  public static final String rowDefFilterType = "_filter_type";
 
-  public static String rowDefFilterValue = "_filter_value";
+  public static final String rowDefFilterValue = "_filter_value";
 
-  public static String orderedColumnsDef = "orderedColumns";
+  public static final String orderedColumnsDef = "orderedColumns";
   
-  public static String defaultFetchLimit = "1000";
+  public static final String defaultFetchLimit = "1000";
   
-  public static String BOUNDARY = "boundary";
+  public static final String BOUNDARY = "boundary";
   
-  public static String multipartFileHeader = "filename=\"";
+  protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
   
-  public static int MAX_BATCH_SIZE = 10485760;
+  public static final String multipartFileHeader = "filename=\"";
+  
+  public static final int MAX_BATCH_SIZE = 10485760;
 
-  private DefaultHttpClient httpClient = null;
+  private CloseableHttpClient httpClient = null;
 
   private HttpContext localContext = null;
 
@@ -264,7 +265,8 @@ public class WinkClient {
    * 
    */
   public void init() {
-    httpClient = new DefaultHttpClient();
+	httpClient = HttpClientBuilder.create().build();
+	  
   }
   
   /**
@@ -276,29 +278,8 @@ public class WinkClient {
    */
   public void init(String host, String userName, String password) {
     int CONNECTION_TIMEOUT = 60000;
-    HttpParams params = new BasicHttpParams();
-    HttpConnectionParams.setConnectionTimeout(params, CONNECTION_TIMEOUT);
-    HttpConnectionParams.setSoTimeout(params, 2 * CONNECTION_TIMEOUT);
-    // support redirecting to handle http: => https: transition
-    HttpClientParams.setRedirecting(params, true);
-    // support authenticating
-    HttpClientParams.setAuthenticating(params, true);
-    HttpClientParams.setCookiePolicy(params,
-        CookiePolicy.BROWSER_COMPATIBILITY);
-    // if possible, bias toward digest auth (may not be in 4.0 beta 2)
-    List<String> authPref = new ArrayList<String>();
-    authPref.add(AuthPolicy.DIGEST);
-    authPref.add(AuthPolicy.BASIC);
-    // does this work in Google's 4.0 beta 2 snapshot?
-    params.setParameter(AuthPNames.TARGET_AUTH_PREF, authPref);
-    params.setParameter(ClientPNames.MAX_REDIRECTS, 4);
-    params.setParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, true);
-    
-    httpClient = new DefaultHttpClient();
-    httpClient.setParams(params);
-    
+ 
     // Context 
-
     // context holds authentication state machine, so it cannot be
     // shared across independent activities.
     localContext = new BasicHttpContext();
@@ -307,12 +288,36 @@ public class WinkClient {
     credsProvider = new BasicCredentialsProvider();
     
     //AuthScope a = new AuthScope("adapt.epi-ucsf.org", -1, null, AuthPolicy.DIGEST);
-    AuthScope a = new AuthScope(host, -1, null, AuthPolicy.DIGEST);
+    AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
     Credentials c = new UsernamePasswordCredentials(userName, password);
     credsProvider.setCredentials(a, c);
     
-    localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
-    localContext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
+    localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
+    localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
+    
+	SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT).setSoTimeout(2*CONNECTION_TIMEOUT).build();
+	  
+    // if possible, bias toward digest auth (may not be in 4.0 beta 2)
+    List<String> targetPreferredAuthSchemes = new ArrayList<String>();
+    targetPreferredAuthSchemes.add(AuthSchemes.DIGEST);
+    targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
+
+    RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT)
+	    .setConnectTimeout(CONNECTION_TIMEOUT)
+	    // support authenticating
+	    .setAuthenticationEnabled(true)
+	    // support redirecting to handle http: => https: transition
+	    .setRedirectsEnabled(true)
+	    // max redirects is set to 4
+	    .setMaxRedirects(4)
+	    .setCircularRedirectsAllowed(true)
+	    .setTargetPreferredAuthSchemes(targetPreferredAuthSchemes)
+	    .setCookieSpec(CookieSpecs.DEFAULT)
+	    .build();
+	
+    httpClient = HttpClientBuilder.create()
+        .setDefaultSocketConfig(socketConfig)
+        .setDefaultRequestConfig(requestConfig).build();
   }
   
   /**
@@ -321,22 +326,19 @@ public class WinkClient {
    * @param host the host to authenticate against
    * @param userName the user name  to use for auth
    * @param password the password to use for auth
-   * @param basicParams the http parameters to use
+   * @param socketConfig the socket config parameters to use
+   * @param reqConfig the request config parameters to use
    * @param basicStore the cookie store to use 
    * @param basicProvider the credentials provider to use
    */
-  public void init(String host, String userName, String password, BasicHttpParams basicParams,
-      BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
-    httpClient = new DefaultHttpClient();
-    if (basicParams != null) {
-      httpClient.setParams(basicParams);
-    }
-
+  public void init(String host, String userName, String password, SocketConfig socketConfig,
+      RequestConfig reqConfig, BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
+	  
     localContext = new BasicHttpContext();
 
     if (basicStore != null) {
       cookieStore = basicStore;
-      localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+      localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
     }
 
     if  (basicProvider != null) {
@@ -344,14 +346,27 @@ public class WinkClient {
     }
     
     if (credsProvider != null && userName != null && password != null && host != null) {
-      AuthScope a = new AuthScope(host, -1, null, AuthPolicy.DIGEST);
+      AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
       Credentials c = new UsernamePasswordCredentials(userName, password);
       credsProvider.setCredentials(a, c);
     }
 
     if (credsProvider != null) {
-      localContext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
+      localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
     }
+    
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+    
+    if (socketConfig != null) {
+    	clientBuilder.setDefaultSocketConfig(socketConfig);	
+    }
+    
+    if (reqConfig != null) {
+       clientBuilder.setDefaultRequestConfig(reqConfig);	
+    }
+    
+    httpClient = clientBuilder.build();
+   
   }
   
   /**
@@ -3391,10 +3406,13 @@ public class WinkClient {
     return obj;
   }
   
-  @SuppressWarnings("deprecation")
   public void close() {
     if (httpClient != null) {
-      httpClient.close();
+      try {
+        httpClient.close();
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
     }
   }
 }
