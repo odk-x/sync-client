@@ -2132,93 +2132,52 @@ public class WinkClientTest extends TestCase {
     }
   }
   
-//  /**
-//   * Test batchGetFilesForRow
-//   * TBD - this is a temporary test until test aggregate instances
-//   * can be upgraded - this will need to be completely restructured!!
-//   */
-//  public void testBatchGetFileForRowWithValidBinaryFiles_ExpectPass() {
-//	// Using a table that we know exists until aggregate can be upgraded  
-//	String testTableId = "test";
+//  public void testWriteRowDataToCSVWithLotsOfRows_ExpectPass() {
+//    String testTableId = "test21";
+//    String tableSchemaETag = null;
 //
-//    // manufacture a rowId for this record...
-//    //String RowId = "uuid:" + UUID.randomUUID().toString();
-//	
-//	// Using a row that we know exists until test aggregate instance
-//	// has been updated
-//    String RowId = "test";
-//    
-//    //S tring tableSchemaETag = null;
-//	// Using a tableSchemaETag that we know exists until test aggregate instance
-//	// has been udpated
-//    String tableSchemaETag = "test";
-//
-//    String pathToSaveFile = absolutePathOfTestFiles + "downloadInstance";
+//    String csvFile = absolutePathOfTestFiles + "cookstoves/data_definition.csv";
+//    String csvDataFile = absolutePathOfTestFiles + "cookstoves/data.csv";
+//    String csvFilePathToWriteTo = absolutePathOfTestFiles + "writeLargeRowData.csv";
 //
 //    try {
 //      WinkClient wc = new WinkClient();
 //      wc.init(host, userName, password);
+// 
+//      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
+//      System.out.println("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: result is " + result);
 //
-//      // Get the list of files
-//      JSONObject filesToGetObj = wc.getManifestForRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+//      if (result.containsKey("tableId")) {
+//        String tableId = result.getString("tableId");
+//        assertEquals(tableId, testTableId);
+//        tableSchemaETag = result.getString("schemaETag");
+//      }
 //      
-//      // Download files into pathToSaveFile 
-//      wc.batchGetFilesForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, pathToSaveFile, filesToGetObj, 0);
-//	      
+//      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, batchSize);
+//
+//      wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvFilePathToWriteTo);
+//      
+//      InputStream in = new FileInputStream(csvFilePathToWriteTo);
+//      InputStreamReader inputStream = new InputStreamReader(in);
+//      RFC4180CsvReader reader = new RFC4180CsvReader(inputStream);
+//      int lineCnt = 0;
+//      while (reader.readNext() != null) {
+//        lineCnt++;
+//      }
+//      
+//      // This will need to be changed for lots of data
+//      assertEquals(lineCnt, 8193);
+//
+//      // Now delete the table
+//      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+//      
 //      wc.close();
 //
 //    } catch (Exception e) {
 //      e.printStackTrace();
-//      TestCase.fail("testBatchGetFileForRowWithValidBinaryFiles_ExpectPass: expected pass");
+//      TestCase.fail("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: expected pass");
 //    }
 //  }
-  
-  public void testWriteRowDataToCSVWithLotsOfRows_ExpectPass() {
-    String testTableId = "test21";
-    String tableSchemaETag = null;
-
-    String csvFile = absolutePathOfTestFiles + "cookstoves/data_definition.csv";
-    String csvDataFile = absolutePathOfTestFiles + "cookstoves/data.csv";
-    String csvFilePathToWriteTo = absolutePathOfTestFiles + "writeLargeRowData.csv";
-
-    try {
-      WinkClient wc = new WinkClient();
-      wc.init(host, userName, password);
- 
-      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
-      System.out.println("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: result is " + result);
-
-      if (result.containsKey("tableId")) {
-        String tableId = result.getString("tableId");
-        assertEquals(tableId, testTableId);
-        tableSchemaETag = result.getString("schemaETag");
-      }
-      
-      wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, batchSize);
-
-      wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvFilePathToWriteTo);
-      
-      InputStream in = new FileInputStream(csvFilePathToWriteTo);
-      InputStreamReader inputStream = new InputStreamReader(in);
-      RFC4180CsvReader reader = new RFC4180CsvReader(inputStream);
-      int lineCnt = 0;
-      while (reader.readNext() != null) {
-        lineCnt++;
-      }
-      
-      // This will need to be changed for lots of data
-      assertEquals(lineCnt, 8193);
-
-      // Now delete the table
-      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
-      
-      wc.close();
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: expected pass");
-    }
-  }
   
   public void testWriteRowDataToCSVWhenNoRowsExist_ExpectPass() {
     String testTableId = "test22";
@@ -2789,6 +2748,94 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
+    }
+  }
+  
+  /**
+   * Test batchGetFilesForRow
+   */
+  public void testBatchGetFileForRowWithValidBinaryFiles_ExpectPass() {
+	String testTableId = "test31";
+
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue = "/blah/blah/blah";
+    
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    boolean foundFile = false;
+    String relativePathOnServer = "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
+    String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
+    
+    String pathToSaveFile = absolutePathOfTestFiles + "downloadBatchInstance";
+    String pathToVerify = pathToSaveFile + WinkClient.separator + relativePathOnServer;
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      
+      Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 1);
+      
+      JSONObject res = wc.getRowsSince(agg_url, appId, testTableId, tableSchemaETag, null, null,
+          null);
+      JSONArray rows = res.getJSONArray("rows");
+
+      assertEquals(rows.size(), 1);
+      
+      JSONObject jsonRow = rows.getJSONObject(0);
+      
+      // Now check that the row was created with the right rowId
+      assertTrue(checkThatRowExists(RowId, colValue, jsonRow));
+
+      // Put file for row
+      wc.putFileForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, wholePathToFile,
+          relativePathOnServer);
+
+      // Make sure that the file is on the server foundFile =
+      foundFile = checkThatInstanceFileExistsOnServer(wc, agg_url, appId, testTableId, tableSchemaETag, RowId, relativePathOnServer);
+
+      assertTrue(foundFile);
+
+      // Get the list of files
+      JSONObject filesToGetObj = wc.getManifestForRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+      
+      // Download files into pathToSaveFile 
+      wc.batchGetFilesForRow(agg_url, appId, testTableId, tableSchemaETag, RowId, pathToSaveFile, filesToGetObj, 0);
+      
+      assertTrue(checkThatTwoFilesAreTheSame(wholePathToFile, pathToVerify));
+      
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+	      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testBatchGetFileForRowWithValidBinaryFiles_ExpectPass: expected pass");
     }
   }
 

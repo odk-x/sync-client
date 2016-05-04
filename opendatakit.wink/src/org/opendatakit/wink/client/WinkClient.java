@@ -66,7 +66,6 @@ import org.apache.commons.fileupload.MultipartStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.SocketConfig;
 
@@ -265,7 +264,7 @@ public class WinkClient {
    * 
    */
   public void init() {
-	httpClient = HttpClientBuilder.create().build();
+    httpClient = HttpClientBuilder.create().build();
 	  
   }
   
@@ -295,7 +294,7 @@ public class WinkClient {
     localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
     localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
     
-	SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT).setSoTimeout(2*CONNECTION_TIMEOUT).build();
+    SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT).setSoTimeout(2*CONNECTION_TIMEOUT).build();
 	  
     // if possible, bias toward digest auth (may not be in 4.0 beta 2)
     List<String> targetPreferredAuthSchemes = new ArrayList<String>();
@@ -303,17 +302,17 @@ public class WinkClient {
     targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
 
     RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT)
-	    .setConnectTimeout(CONNECTION_TIMEOUT)
-	    // support authenticating
-	    .setAuthenticationEnabled(true)
-	    // support redirecting to handle http: => https: transition
-	    .setRedirectsEnabled(true)
-	    // max redirects is set to 4
-	    .setMaxRedirects(4)
-	    .setCircularRedirectsAllowed(true)
-	    .setTargetPreferredAuthSchemes(targetPreferredAuthSchemes)
-	    .setCookieSpec(CookieSpecs.DEFAULT)
-	    .build();
+        .setConnectTimeout(CONNECTION_TIMEOUT)
+        // support authenticating
+        .setAuthenticationEnabled(true)
+        // support redirecting to handle http: => https: transition
+        .setRedirectsEnabled(true)
+        // max redirects is set to 4
+        .setMaxRedirects(4)
+        .setCircularRedirectsAllowed(true)
+        .setTargetPreferredAuthSchemes(targetPreferredAuthSchemes)
+        .setCookieSpec(CookieSpecs.DEFAULT)
+        .build();
 	
     httpClient = HttpClientBuilder.create()
         .setDefaultSocketConfig(socketConfig)
@@ -746,7 +745,7 @@ public class WinkClient {
     
       //String tableRes = tableResource.accept("application/json").get(String.class);
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -841,7 +840,8 @@ public class WinkClient {
       
       System.out.println("uploadFile: response for file " + wholePathToFile + " is ");
   
-      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), 
+          Charset.forName("UTF-8")));
       String line;
       while ((line = responseBuff.readLine()) != null)
         System.out.println(line);
@@ -1032,7 +1032,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -1092,7 +1092,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -1210,7 +1210,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -1330,7 +1330,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -1375,7 +1375,7 @@ public class WinkClient {
       throw new IllegalArgumentException("createTableWithCSV: file " + csvFilePath + " does not exist");
     }
     InputStream in = new FileInputStream(file);
-    InputStreamReader inputStream = new InputStreamReader(in);
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
     reader = new RFC4180CsvReader(inputStream);
 
     return createTableWithCSVProcessing(uri, appId, tableId, schemaETag, cols, reader);
@@ -1405,7 +1405,7 @@ public class WinkClient {
     }
     
     InputStream in = csvInputStream;
-    InputStreamReader inputStream = new InputStreamReader(in);
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
     reader = new RFC4180CsvReader(inputStream);
 
     return createTableWithCSVProcessing(uri, appId, tableId, schemaETag, cols, reader);
@@ -1544,7 +1544,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -1651,7 +1651,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -1759,7 +1759,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -1850,7 +1850,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -2040,7 +2040,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -2131,7 +2131,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -2433,7 +2433,7 @@ public class WinkClient {
     }
 
     InputStream in = new FileInputStream(file);
-    InputStreamReader inputStream = new InputStreamReader(in);
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
     reader = new RFC4180CsvReader(inputStream);
 
     createRowsUsingCSVBulkUploadProcessing(uri, appId, tableId, schemaETag, batchSize, reader);
@@ -2463,7 +2463,7 @@ public class WinkClient {
     }
     
     InputStream in = csvInputStream;
-    InputStreamReader inputStream = new InputStreamReader(in);
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
     reader = new RFC4180CsvReader(inputStream);
 
     createRowsUsingCSVBulkUploadProcessing(uri, appId, tableId, schemaETag, batchSize, reader);
@@ -2596,7 +2596,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
@@ -3088,9 +3088,8 @@ public class WinkClient {
       
       InputStream inStream = response.getEntity().getContent();
       
-      @SuppressWarnings("deprecation")
       byte[] msParam = boundaryVal.getBytes(Charset.forName("UTF-8"));
-      MultipartStream multipartStream = new MultipartStream(inStream, msParam);
+      MultipartStream multipartStream = new MultipartStream(inStream, msParam, DEFAULT_BOUNDARY_BUFSIZE, null);
 
       OutputStream os = null;
       
@@ -3214,7 +3213,8 @@ public class WinkClient {
         response = httpClient.execute(request);
       }
   
-      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
+          Charset.forName("UTF-8")));
       String line;
       while ((line = responseBuff.readLine()) != null)
         System.out.println(line);
@@ -3298,7 +3298,7 @@ public class WinkClient {
     }
     
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent()));
+        .getContent(), Charset.forName("UTF-8")));
     StringBuilder strLine = new StringBuilder();
     String resLine;
     while ((resLine = rd.readLine()) != null) {
@@ -3388,7 +3388,7 @@ public class WinkClient {
       }
       
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent()));
+          .getContent(), Charset.forName("UTF-8")));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
