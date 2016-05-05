@@ -1,0 +1,9 @@
+# app target folder
+target/*
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
