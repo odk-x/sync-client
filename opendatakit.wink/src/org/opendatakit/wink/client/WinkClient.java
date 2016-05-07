@@ -412,7 +412,7 @@ public class WinkClient {
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo, int version)
+  public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo, String version)
       throws Exception {
 
     // Get all App Level Files
@@ -515,7 +515,7 @@ public class WinkClient {
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom, int version)
+  public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom, String version)
       throws Exception {
     ArrayList<String> assetsFiles;
     ArrayList<String> tableFiles;
@@ -670,7 +670,7 @@ public class WinkClient {
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void getAllTableLevelFilesFromUri(String uri, String appId, String tableId,
-      String dirToSaveDataTo, int version) throws Exception {
+      String dirToSaveDataTo, String version) throws Exception {
     String relativeDir;
     JSONObject file;
 
@@ -697,7 +697,7 @@ public class WinkClient {
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void getAllAppLevelFilesFromUri(String uri, String appId, String dirToSaveDataTo,
-      int version) throws Exception {
+      String version) throws Exception {
     String relativeDir;
     JSONObject file;
 
@@ -723,7 +723,7 @@ public class WinkClient {
    * @return JSONObject of the list of app level files
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public JSONObject getManifestForAppLevelFiles(String uri, String appId, int version)
+  public JSONObject getManifestForAppLevelFiles(String uri, String appId, String version)
       throws Exception {
     JSONObject obj = null;
     
@@ -788,7 +788,7 @@ public class WinkClient {
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void uploadFile(String uri, String appId, String wholePathToFile,
-      String relativePathOnServer, int version) throws Exception {
+      String relativePathOnServer, String version) throws Exception {
     
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -879,7 +879,7 @@ public class WinkClient {
    * @throws Exception any exception encountered is thrown to the caller
    */
   public void downloadFile(String uri, String appId, String pathToSaveFile,
-      String relativePathOnServer, int version) throws Exception {
+      String relativePathOnServer, String version) throws Exception {
 
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -962,7 +962,7 @@ public class WinkClient {
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered during this function
    */
-  public void deleteFile(String uri, String appId, String relativePathOnServer, int version)
+  public void deleteFile(String uri, String appId, String relativePathOnServer, String version)
       throws Exception {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: uri cannot be null");
@@ -1641,7 +1641,7 @@ public class WinkClient {
    * @return a JSONObject with the list of table level files
    * @throws Exception any exception encountered is thrown to the caller
    */
-  public JSONObject getManifestForTableId(String uri, String appId, String tableId, int version)
+  public JSONObject getManifestForTableId(String uri, String appId, String tableId, String version)
       throws Exception {
     JSONObject obj = null;
 
