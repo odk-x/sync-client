@@ -35,7 +35,7 @@ public class WinkClientTest extends TestCase {
   String userName;
   String password;
   int batchSize;
-  int version;
+  String version;
 
   /*
    * Perform setup for test if necessary
@@ -56,7 +56,7 @@ public class WinkClientTest extends TestCase {
     password = "";
     URL url = new URL(agg_url);
     host = url.getHost();
-    version = 2;
+    version = "2";
   }
 
   /*
