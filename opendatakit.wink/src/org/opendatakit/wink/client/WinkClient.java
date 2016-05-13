@@ -786,8 +786,9 @@ public class WinkClient {
    * the file will be stored
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
+   * @return Http response status code
    */
-  public void uploadFile(String uri, String appId, String wholePathToFile,
+  public int uploadFile(String uri, String appId, String wholePathToFile,
       String relativePathOnServer, String version) throws Exception {
     
     if (httpClient == null) {
@@ -817,7 +818,7 @@ public class WinkClient {
       File file = new File(wholePathToFile);
       if (!file.exists()) {
         System.out.println("uploadFile: file " + wholePathToFile + " does not exist");
-        return;
+        return -1;
       }
   
       //InputStream in = new FileInputStream(file);
@@ -857,6 +858,8 @@ public class WinkClient {
       while ((line = responseBuff.readLine()) != null)
         System.out.println(line);
       //in.close();
+
+      return response.getStatusLine().getStatusCode();
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -877,8 +880,9 @@ public class WinkClient {
    * the file is stored
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered is thrown to the caller
+   * @return Http response status code
    */
-  public void downloadFile(String uri, String appId, String pathToSaveFile,
+  public int downloadFile(String uri, String appId, String pathToSaveFile,
       String relativePathOnServer, String version) throws Exception {
 
     if (httpClient == null) {
@@ -944,6 +948,8 @@ public class WinkClient {
       
       fos.close();
       fis.close();
+
+      return response.getStatusLine().getStatusCode();
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -961,8 +967,9 @@ public class WinkClient {
    * the file is stored
    * @param version ODK version code, 1 or 2
    * @throws Exception any exception encountered during this function
+   * @return HTTP response status code
    */
-  public void deleteFile(String uri, String appId, String relativePathOnServer, String version)
+  public int deleteFile(String uri, String appId, String relativePathOnServer, String version)
       throws Exception {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: uri cannot be null");
@@ -1001,6 +1008,8 @@ public class WinkClient {
       
       System.out.println("deleteFile: client response is " + response.getStatusLine().getStatusCode() + ":" +
           response.getStatusLine().getReasonPhrase());
+
+      return response.getStatusLine().getStatusCode();
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -1590,9 +1599,10 @@ public class WinkClient {
    * @param tableId the table identifier or name
    * @param schemaETag identifies an instance of the table
    * @throws Exception any exception encountered during this function
+   * @return Http response status code
    */
-  public void deleteTableDefinition(String uri, String appId, String tableId, String schemaETag) throws Exception {
-    
+  public int deleteTableDefinition(String uri, String appId, String tableId, String schemaETag)
+      throws Exception {
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
@@ -1622,6 +1632,8 @@ public class WinkClient {
       System.out.println("deleteTableDefinition: client response is " + 
           response.getStatusLine().getStatusCode() + ":" + 
           response.getStatusLine().getReasonPhrase());
+
+      return response.getStatusLine().getStatusCode();
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -3171,9 +3183,9 @@ public class WinkClient {
    * @param wholePathToFile file path of the file to upload
    * @param relativePathOnServer the path on the server for the attachment 
    * @throws Exception any exception encountered is thrown to the caller
-   * 
+   * @return Http response status code
    */
-  public void putFileForRow(String uri, String appId, String tableId, String schemaETag,
+  public int putFileForRow(String uri, String appId, String tableId, String schemaETag,
       String userRowId, String wholePathToFile, String relativePathOnServer) throws Exception {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("putFileForRow: uri cannot be null");
@@ -3237,6 +3249,8 @@ public class WinkClient {
         System.out.println(line);
       
       //in.close();
+
+      return response.getStatusLine().getStatusCode();
     } finally {
       if (request != null) {
         request.releaseConnection();
