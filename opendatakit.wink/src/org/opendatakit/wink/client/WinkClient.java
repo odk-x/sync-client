@@ -567,7 +567,7 @@ public class WinkClient {
            mapRowIdToInstanceDir.put(convertRowIdForInstances(rowId), rowId);
          }
 
-        resumeCursor = obj.getString("webSafeResumeCursor");
+        resumeCursor = obj.optString("webSafeResumeCursor");
       } while(obj.getBoolean("hasMoreResults"));
       
       // Find table Id Files and push up
@@ -654,7 +654,7 @@ public class WinkClient {
           getFileForRow(uri, appId, tableId, schemaETag, rowId, false, pathToSaveFile, fileName);
         }
       }
-      resumeCursor = row.getString("webSafeResumeCursor");
+      resumeCursor = row.optString("webSafeResumeCursor");
     }while(row.getBoolean("hasMoreResults"));
   }
 
@@ -1970,7 +1970,7 @@ public class WinkClient {
       
       writeOutFetchLimitRows(writer, rows, colArray);
       
-      resumeCursor = rowWrapper.getString("webSafeResumeCursor");
+      resumeCursor = rowWrapper.optString("webSafeResumeCursor");
       
     } while (rowWrapper.getBoolean("hasMoreResults"));
 
