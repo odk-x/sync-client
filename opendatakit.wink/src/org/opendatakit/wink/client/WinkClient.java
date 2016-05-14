@@ -164,6 +164,10 @@ public class WinkClient {
   
   public static final String jsonDataETag = "dataETag";
 
+  public static final String jsonWebSafeResumeCursor = "webSafeResumeCursor";
+
+  public static final String jsonHasMoreResults = "hasMoreResults";
+
   public static final String rowDefId = "_id";
 
   public static final String rowDefFormId = "_form_id";
@@ -567,8 +571,8 @@ public class WinkClient {
            mapRowIdToInstanceDir.put(convertRowIdForInstances(rowId), rowId);
          }
 
-        resumeCursor = obj.optString("webSafeResumeCursor");
-      } while(obj.getBoolean("hasMoreResults"));
+        resumeCursor = obj.optString(jsonWebSafeResumeCursor);
+      } while(obj.getBoolean(jsonHasMoreResults));
       
       // Find table Id Files and push up
       String tableIdPath = tablesDir + File.separator + tableId;
@@ -654,8 +658,8 @@ public class WinkClient {
           getFileForRow(uri, appId, tableId, schemaETag, rowId, false, pathToSaveFile, fileName);
         }
       }
-      resumeCursor = row.optString("webSafeResumeCursor");
-    }while(row.getBoolean("hasMoreResults"));
+      resumeCursor = row.optString(jsonWebSafeResumeCursor);
+    }while(row.getBoolean(jsonHasMoreResults));
   }
 
   /**
@@ -1970,9 +1974,9 @@ public class WinkClient {
       
       writeOutFetchLimitRows(writer, rows, colArray);
       
-      resumeCursor = rowWrapper.optString("webSafeResumeCursor");
+      resumeCursor = rowWrapper.optString(jsonWebSafeResumeCursor);
       
-    } while (rowWrapper.getBoolean("hasMoreResults"));
+    } while (rowWrapper.getBoolean(jsonHasMoreResults));
 
     writer.close();
   }
