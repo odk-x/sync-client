@@ -48,7 +48,7 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "https://test.appspot.com";
+    agg_url = "https://clarlars.appspot.com";
     appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
@@ -2838,6 +2838,73 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testBatchGetFileForRowWithValidBinaryFiles_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testAlterRowsUsingSingleBatchWithNoTable_ExpectPass() {
+    String testTableId = "test32";
+    String colName = "scan_output_directory";
+    String colKey = "scan_output_directory";
+    String colType = "string";
+    String colValue2 = "/whatever/whatever";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    // manufacture a rowId for this record...
+    String RowId = "uuid:" + UUID.randomUUID().toString();
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, null, columns);
+
+      if (result.containsKey("tableId")) {
+        String tableId = result.getString("tableId");
+        assertEquals(tableId, testTableId);
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      // Now update the row
+      DataKeyValue dkv = new DataKeyValue("scan_output_directory", colValue2);
+      ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+      dkvl.add(dkv);
+      
+      DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+      Date date = new Date();
+      String startTime = dateFormat.format(date);   
+        
+      Row row = Row.forInsert(RowId, null, null, null, startTime, null, Scope.EMPTY_SCOPE, dkvl);
+      
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      rowList.add(row);
+      RowOutcomeList outcomeList = wc.alterRowsUsingSingleBatch(agg_url, appId, testTableId, tableSchemaETag, null, rowList);
+      
+      ArrayList<RowOutcome> resultingRowOutcomeList = outcomeList.getRows();
+      RowOutcome rowOutcome = resultingRowOutcomeList.get(0);
+      
+      // Check that the row was updated
+      assertEquals(resultingRowOutcomeList.size(), 1);
+
+      assertEquals(rowOutcome.getOutcome(), OutcomeType.SUCCESS);
+      
+      // Check that the row was updated
+      JSONObject rowRes = wc.getRow(agg_url, appId, testTableId, tableSchemaETag, RowId);
+      assertTrue(checkThatRowExists(RowId, colValue2, rowRes));
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+
+      assertFalse(doesTableExistOnServer(testTableId, tableSchemaETag));
+      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testDeleteRowWhenRowExists_ExpectPass: expected pass");
     }
   }
 

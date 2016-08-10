@@ -2796,7 +2796,11 @@ public class WinkClient {
     String dataETag = getTableDataETag(uri, appId, tableId);
 
     // Check that the dataETag is valid before beginning
-    if (!dataETag.equals(dataETagVal)) {
+    if (dataETag == null && dataETagVal != null) {
+      throw new IllegalArgumentException("The dataETag should be null");
+    }
+    
+    if (dataETag != null && !dataETag.equals(dataETagVal)) {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
     
