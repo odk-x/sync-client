@@ -1172,6 +1172,12 @@ public class WinkClient {
   private JSONObject convertResponseToJSONObject(HttpResponse response) throws IOException,
       JSONException {
     JSONObject obj;
+    String res = convertResponseToString(response);
+    obj = new JSONObject(res);
+    return obj;
+  }
+
+  private String convertResponseToString(HttpResponse response) throws IOException {
     BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
         .getContent(), Charset.forName(UTF8_STR)));
     StringBuilder strLine = new StringBuilder();
@@ -1180,9 +1186,7 @@ public class WinkClient {
       strLine.append(resLine);
     }
     String res = strLine.toString();
-
-    obj = new JSONObject(res);
-    return obj;
+    return res;
   }
 
   /**
@@ -1345,14 +1349,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
+      String res = convertResponseToString(response);
 
       System.out.println("createTable: result is for tableId " + tableId + " is " + res.toString());
 
@@ -1476,14 +1473,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
+      String res = convertResponseToString(response);
 
       System.out.println("createTableWithJSON: result is for tableId " + tableId + " is "
           + res.toString());
@@ -2638,14 +2628,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
+      String res = convertResponseToString(response);
 
       if (print) {
         System.out.println("bulkRowsSender: result with tableId " + tableId + " is " + res);
