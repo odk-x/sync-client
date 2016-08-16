@@ -41,6 +41,7 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
@@ -81,6 +82,8 @@ import org.apache.http.config.SocketConfig;
 public class WinkClient {
   public static final String TAG = "WinkClient";
   
+  public static final String JSON_STR = "json";
+  
   public static final String ASSETS_DIR = "assets";
   
   public static final String TABLES_DIR = "tables";
@@ -89,7 +92,7 @@ public class WinkClient {
   
   public static final String UTF8_STR = "UTF-8";
   
-  public static String FILENAME_STR = "filename";
+  public static final String FILENAME_STR = "filename";
   
   public static final String INSTANCES_DIR = "instances";
 
@@ -472,6 +475,12 @@ public class WinkClient {
     
     return rowInstanceFilePath;
   }
+  
+  public String getRelativePath(String dir, String relativePath) {
+    String relPath = dir + File.separator + relativePath;
+    
+    return relPath;
+  }
 
   /**
    * Gets all data from a uri on the server and saves the data to the specified
@@ -781,7 +790,7 @@ public class WinkClient {
     for (int i = 0; i < tableLevelFiles.size(); i++) {
       file = tableLevelFiles.getJSONObject(i);
       relativeDir = file.getString(FILENAME_STR);
-      String pathToSaveFile = dirToSaveDataTo + File.separator + relativeDir;
+      String pathToSaveFile = this.getRelativePath(dirToSaveDataTo, relativeDir);
       downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
@@ -815,7 +824,7 @@ public class WinkClient {
     for (int i = 0; i < appLevelFiles.size(); i++) {
       file = appLevelFiles.getJSONObject(i);
       relativeDir = file.getString(FILENAME_STR);
-      String pathToSaveFile = dirToSaveDataTo + File.separator + relativeDir;
+      String pathToSaveFile = getRelativePath(dirToSaveDataTo, relativeDir);
       downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
@@ -849,17 +858,7 @@ public class WinkClient {
       System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -879,6 +878,32 @@ public class WinkClient {
       }
     }
     return obj;
+  }
+
+  private HttpResponse httpRequestExecute(HttpRequestBase request, String contentType, boolean excludeAcceptParams) throws IOException,
+      ClientProtocolException {
+    if (request == null) {
+      throw new IllegalArgumentException("httpRequestExecute: request cannnot be null");
+    }
+    
+    if (contentType == null || contentType.length() == 0) {
+      throw new IllegalArgumentException("httpRequestExecute: contentType cannot be null");
+    }
+    request.addHeader("content-type", contentType + "; charset=utf-8");
+    request.addHeader("X-OpenDataKit-Version", "2.0");
+    
+    if (excludeAcceptParams == false) {
+      request.addHeader("accept", contentType);
+      request.addHeader("accept-charset", "utf-8");
+    }
+
+    HttpResponse response = null;
+    if (localContext != null) {
+      response = httpClient.execute(request, localContext);
+    } else {
+      response = httpClient.execute(request);
+    }
+    return response;
   }
 
   /**
@@ -942,20 +967,13 @@ public class WinkClient {
 
       // issue the request
       String contentType = this.determineContentType(file.getName());
-      request.addHeader("content-type", contentType + "; charset=utf-8");
-      request.addHeader("accept", contentType);
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
 
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, contentType, false);
 
       System.out.println("uploadFile: response for file " + wholePathToFile + " is ");
 
@@ -1029,17 +1047,10 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
 
       String accept = determineContentType(file.getName());
-      request.addHeader("content-type", accept + "; charset=utf-8");
-      request.addHeader("accept", accept);
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      response = httpRequestExecute(request, accept, false);
+      
       System.out.println("downloadFile: issued get request for " + relativePathOnServer);
 
       file.getParentFile().mkdirs();
@@ -1106,17 +1117,10 @@ public class WinkClient {
       System.out.println("deleteFile: agg_uri is " + agg_uri);
 
       request = new HttpDelete(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
 
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       System.out.println("deleteFile: client response is "
           + response.getStatusLine().getStatusCode() + ":"
@@ -1160,17 +1164,7 @@ public class WinkClient {
       System.out.println("getTables: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1224,17 +1218,7 @@ public class WinkClient {
       System.out.println("getTable: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1366,18 +1350,11 @@ public class WinkClient {
 
       request = new HttpPut(agg_uri);
       StringEntity params = new StringEntity(tableObj.toString(), UTF8_STR);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
       request.setEntity(params);
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1504,18 +1481,11 @@ public class WinkClient {
 
       request = new HttpPut(agg_uri);
       StringEntity params = new StringEntity(tableObj.toString(), UTF8_STR);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
       request.setEntity(params);
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1751,17 +1721,7 @@ public class WinkClient {
       System.out.println("getTableDefinition: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1817,17 +1777,10 @@ public class WinkClient {
       System.out.println("deleteTableDefinition: agg_uri is " + agg_uri);
 
       request = new HttpDelete(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+      
       System.out.println("deleteTableDefinition: client response is "
           + response.getStatusLine().getStatusCode() + ":"
           + response.getStatusLine().getReasonPhrase());
@@ -1870,17 +1823,7 @@ public class WinkClient {
       System.out.println("getManifestForTableId: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -1981,20 +1924,12 @@ public class WinkClient {
         agg_uri = agg_uri + DATA_ETAG_QUERY_PARAM + dataETag;
       }
 
-      request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
       System.out.println("getRowsSince: agg uri is " + agg_uri);
-
+      
+      request = new HttpGet(agg_uri);
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -2072,21 +2007,12 @@ public class WinkClient {
       if (useCursor) {
         agg_uri = agg_uri + CURSOR_QUERY_PARAM + cursor;
       }
-
-      request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
       System.out.println("getRows: agg uri is " + agg_uri);
-
+      
+      request = new HttpGet(agg_uri);
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -2275,17 +2201,7 @@ public class WinkClient {
       System.out.println("getRow: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -2365,17 +2281,7 @@ public class WinkClient {
       System.out.println("getManifestForRow: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -2791,18 +2697,11 @@ public class WinkClient {
 
       request = new HttpPut(agg_uri);
       StringEntity params = new StringEntity(rowRes, UTF8_STR);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
       request.setEntity(params);
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -3105,22 +3004,16 @@ public class WinkClient {
       if (!file.exists()) {
         file.createNewFile();
       }
-
-      request = new HttpGet(agg_uri);
+      
       System.out.println("getFileForRow: agg_uri is " + agg_uri);
 
+      request = new HttpGet(agg_uri);
       String accept = determineContentType(file.getName());
-      request.addHeader("content-type", accept + "; charset=utf-8");
-      request.addHeader("accept", accept);
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, accept, false);
+      
       System.out.println("getFileForRow: issued get request for " + relativePathOnServer);
 
       InputStream fis = response.getEntity().getContent();
@@ -3299,22 +3192,12 @@ public class WinkClient {
 
       request = new HttpPost(agg_uri);
 
-      // Takes json by default - just put a dummy file here for now
-      String accept = determineContentType("test.json");
-
-      // TBD: Make constants for this!!
-      request.addHeader("content-type", accept + "; charset=utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
       StringEntity params = new StringEntity(filesToGet.toString(), UTF8_STR);
       request.setEntity(params);
-
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = this.httpRequestExecute(request, mimeMapping.get(JSON_STR), true);
 
       System.out.println("batchGetFilesForRow: client response is "
           + response.getStatusLine().getStatusCode() + ":"
@@ -3455,28 +3338,19 @@ public class WinkClient {
       }
 
       byte[] data = Files.readAllBytes(file.toPath());
-
-      request = new HttpPost(agg_uri);
-
-      // issue the request
-      String contentType = this.determineContentType(file.getName());
-
-      request.addHeader("content-type", contentType + "; charset=utf-8");
-      request.addHeader("accept", contentType);
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
+      
       System.out.println("putFileForRow: response for file " + wholePathToFile + " is ");
 
+      request = new HttpPost(agg_uri);
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
-
+      String contentType = this.determineContentType(file.getName());
+      
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
 
+      // issue the request
+      response = httpRequestExecute(request, contentType, false);
+      
       BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
       String line;
@@ -3558,19 +3432,12 @@ public class WinkClient {
         agg_uri = agg_uri + "&" + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
       }
 
-      request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
       System.out.println("queryRowsInTimeRangeWithLastUpdateDate: agg uri is " + agg_uri);
-
+      
+      request = new HttpGet(agg_uri);
       HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
@@ -3661,17 +3528,7 @@ public class WinkClient {
       System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
       
       request = new HttpGet(agg_uri);
-      request.addHeader("content-type", "application/json; charset=utf-8");
-      request.addHeader("accept", "application/json");
-      request.addHeader("accept-charset", "utf-8");
-      request.addHeader("X-OpenDataKit-Version", "2.0");
-
-      HttpResponse response = null;
-      if (localContext != null) {
-        response = httpClient.execute(request, localContext);
-      } else {
-        response = httpClient.execute(request);
-      }
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
           .getContent(), Charset.forName(UTF8_STR)));
