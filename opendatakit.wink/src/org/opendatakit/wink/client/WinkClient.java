@@ -433,54 +433,146 @@ public class WinkClient {
   public String getTableDefinitionFilePath(String dir, String tableId) {
     String tableDefinitionFileCSVPath = getTableIdDirPath(dir, tableId) 
         + File.separator + "definition.csv";
-    
     return tableDefinitionFileCSVPath;
   }
   
   public String getTableDataCSVFilePath(String dir, String tableId) {
     String tableDataCSVFilePath = getAssetsDirPath(dir)   
         + File.separator + "csv" + File.separator + tableId + ".csv";
-    
     return tableDataCSVFilePath;
   }
   
   public String getTableInstancesDirPath(String dir, String tableId) {
-    String tableInstancesDirPath = this.getTableIdDirPath(dir, tableId) 
+    String tableInstancesDirPath = getTableIdDirPath(dir, tableId) 
         + File.separator + INSTANCES_DIR;
-    
     return tableInstancesDirPath;
   }
   
   public String getTableIdDirPath(String dir, String tableId) {
-    String tableIdDirPath =  getTablesDirPath(dir) + File.separator + tableId;
-    
+    String tableIdDirPath = getTablesDirPath(dir) + File.separator + tableId;
     return tableIdDirPath;
   }
   
   public String getTablesDirPath(String dir) {
     String tableDirPath = dir + File.separator + TABLES_DIR;
-    
     return tableDirPath;
   }
   
   public String getAssetsDirPath(String dir) {
     String assetsDirPath = dir + File.separator + ASSETS_DIR;
-    
     return assetsDirPath;
   }
   
   public String getRowInstanceFilePath(String dir, String tableId, String rowId, String fileName) {
     String rowInstanceFilePath = getTableIdDirPath(dir, tableId) + File.separator + INSTANCES_DIR 
         + File.separator + rowId + File.separator + fileName;
-    
     return rowInstanceFilePath;
   }
   
   public String getRelativePath(String dir, String relativePath) {
     String relPath = dir + File.separator + relativePath;
-    
     return relPath;
   }
+  
+  public String getAppLevelManifestUri(String uri, String appId, String version) {
+    String appLevelManifestUri = uri + SEPARATOR_STR + appId + MANIFEST_URI + version;
+    return appLevelManifestUri;
+  }
+  
+  public String getTableLevelManifestUri(String uri, String appId, String version, String tableId) {
+    String tableLevelManifestUri = getAppLevelManifestUri(uri, appId, version)
+        + SEPARATOR_STR + tableId;
+    return tableLevelManifestUri;
+  }
+  
+  public String getFilesUri(String uri, String appId, String version) {
+    String filesUri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version;
+    return filesUri;
+  }
+  public String getFilesWithRelPathUri(String uri, String appId, String version, String relPath) {
+    String fileswithRelPathUri = getFilesUri(uri, appId, version) + SEPARATOR_STR + relPath;
+    return fileswithRelPathUri;
+  }
+  
+  public String getTablesUri(String uri, String appId) {
+    String tablesUri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT;
+    return tablesUri;
+  }
+  
+  public String getTableIdUri(String uri, String appId, String tableId) {
+    String tableIdUri = getTablesUri(uri, appId) + SEPARATOR_STR + tableId;
+    return tableIdUri;
+  }
+  
+  public String getTableIdRefUri(String uri, String appId, String tableId, String schemaETag) {
+    String tableIdRefUri = getTableIdUri(uri, appId, tableId) 
+        + REF_URI_FRAGMENT + schemaETag;
+    return tableIdRefUri;
+  }
+  
+  public String getTableIdRowsUri(String uri, String appId, String tableId, String schemaETag) {
+    String tableIdRowsUri = getTableIdRefUri(uri, appId, tableId, schemaETag) 
+        + ROWS_URI_FRAGMENT;
+    return tableIdRowsUri;
+  }
+  
+  public String getRowIdUri(String uri, String appId, String tableId, String schemaETag,
+      String rowId) {
+    String rowIdUri = getTableIdRowsUri(uri, appId, tableId, schemaETag) 
+        + SEPARATOR_STR + rowId;
+    return rowIdUri;
+  }
+  
+  public String getRowLevelFileManifestUri(String uri, String appId, String tableId, String schemaETag,
+      String rowId) {
+    String rowLevelManifestUri = getRowIdAttachmentsUri(uri, appId, tableId, schemaETag, rowId) 
+        + MANIFEST_URI_FRAGMENT; 
+    return rowLevelManifestUri;
+  }
+  
+  public String getRowIdAttachmentsUri(String uri, String appId, String tableId, String schemaETag, 
+      String rowId) {
+    String rowIdFileUri = getTableIdRefUri(uri, appId, tableId, schemaETag)
+        + ATTACHMENTS_URI_FRAGMENT + rowId;
+    return rowIdFileUri;
+  }
+  
+  public String getRowIdAttachmentsDownloadUri(String uri, String appId, String tableId, String schemaETag,
+      String rowId) {
+    String rowIdAttachmentsDownloadUri = getRowIdAttachmentsUri(uri, appId, tableId, schemaETag, rowId)
+        + DOWNLOAD_FRAGMENT;
+    return rowIdAttachmentsDownloadUri;
+  }
+  
+  public String getRowIdFileUriWithRelPathUri(String uri, String appId, String tableId, String schemaETag, 
+      String rowId, String relPath) {
+    String rowIdFileUriWithRelPathUri = getRowIdAttachmentsUri(uri, appId, tableId, schemaETag, rowId)
+        + FILE_URI_FRAGMENT + relPath;
+    
+    return rowIdFileUriWithRelPathUri;
+  }
+  
+  public String getTableIdQueryUri (String uri, String appId, String tableId, String schemaETag) {
+    String tableIdQueryUri = getTableIdRefUri(uri, appId, tableId, schemaETag) 
+        + QUERY_URI_FRAGMENT;
+    
+    return tableIdQueryUri;
+  }
+  
+  public String getTableIdLastUpdateDateQueryUri(String uri, String appId, String tableId, String schemaETag) {
+    String tableIdLastUpdateDateQueryUri = getTableIdQueryUri(uri, appId, tableId, schemaETag)
+        + LAST_UPDATE_DATE_URI_FRAGMENT;
+    
+    return tableIdLastUpdateDateQueryUri;
+  }
+  
+  public String getTableIdSavepointTimestampQueryUri(String uri, String appId, String tableId, String schemaETag) {
+    String tableIdSavepointTimestampQueryUri = getTableIdQueryUri(uri, appId, tableId, schemaETag)
+        + SAVEPOINT_TIMESTAMP_URI;
+    
+    return tableIdSavepointTimestampQueryUri;
+  }
+  
 
   /**
    * Gets all data from a uri on the server and saves the data to the specified
@@ -790,7 +882,7 @@ public class WinkClient {
     for (int i = 0; i < tableLevelFiles.size(); i++) {
       file = tableLevelFiles.getJSONObject(i);
       relativeDir = file.getString(FILENAME_STR);
-      String pathToSaveFile = this.getRelativePath(dirToSaveDataTo, relativeDir);
+      String pathToSaveFile = getRelativePath(dirToSaveDataTo, relativeDir);
       downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
@@ -854,7 +946,7 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + MANIFEST_URI + version;
+      String agg_uri = getAppLevelManifestUri(uri, appId, version);
       System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -942,8 +1034,7 @@ public class WinkClient {
     try {
       String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator,
           SEPARATOR_STR);
-      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
-          + uriRelativePath;
+      String agg_uri = getFilesWithRelPathUri(uri, appId, version, uriRelativePath);
       System.out.println("uploadFile: agg uri is " + agg_uri);
 
       File file = new File(wholePathToFile);
@@ -957,7 +1048,7 @@ public class WinkClient {
       request = new HttpPost(agg_uri);
 
       // issue the request
-      String contentType = this.determineContentType(file.getName());
+      String contentType = determineContentType(file.getName());
 
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
@@ -1028,8 +1119,7 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
-          + relativePathOnServer;
+      String agg_uri = getFilesWithRelPathUri(uri, appId, version, relativePathOnServer);
       System.out.println("downloadFile: agg_uri is " + agg_uri);
 
       // File to save
@@ -1103,8 +1193,7 @@ public class WinkClient {
 
     HttpDelete request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
-          + relativePathOnServer;
+      String agg_uri = getFilesWithRelPathUri(uri, appId, version, relativePathOnServer);
       System.out.println("deleteFile: agg_uri is " + agg_uri);
 
       request = new HttpDelete(agg_uri);
@@ -1150,7 +1239,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT;
+      String agg_uri = getTablesUri(uri, appId);
 
       System.out.println("getTables: agg uri is " + agg_uri);
 
@@ -1216,7 +1305,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
+      String agg_uri = getTableIdUri(uri, appId, tableId);
       System.out.println("getTable: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -1322,7 +1411,7 @@ public class WinkClient {
     HttpPut request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
+      String agg_uri = getTableIdUri(uri, appId, tableId);
       System.out.println("createTable: agg_uri is " + agg_uri);
 
       // Add the columns to the table object
@@ -1412,7 +1501,7 @@ public class WinkClient {
     HttpPut request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
+      String agg_uri = getTableIdUri(uri, appId, tableId);
       System.out.println("createTableWithJSON: agg_uri is " + agg_uri);
 
       tableObj = new JSONObject(jsonTableCreationObject);
@@ -1695,8 +1784,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag;
+      String agg_uri = getTableIdRefUri(uri, appId, tableId, schemaETag);
       System.out.println("getTableDefinition: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -1741,8 +1829,7 @@ public class WinkClient {
 
     HttpDelete request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag;
+      String agg_uri = getTableIdRefUri(uri, appId, tableId, schemaETag);
 
       System.out.println("deleteTableDefinition: agg_uri is " + agg_uri);
 
@@ -1789,7 +1876,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + MANIFEST_URI + version + SEPARATOR_STR + tableId;
+      String agg_uri = getTableLevelManifestUri(uri, appId, version, tableId);
       System.out.println("getManifestForTableId: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -1848,8 +1935,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+      String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
 
       if (cursor != null && !cursor.isEmpty()) {
         useCursor = true;
@@ -1935,8 +2021,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+      String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
 
       if (cursor != null && !cursor.isEmpty()) {
         useCursor = true;
@@ -2139,8 +2224,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT + SEPARATOR_STR + rowId;
+      String agg_uri = getRowIdUri(uri, appId, tableId, schemaETag, rowId);
       System.out.println("getRow: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -2210,8 +2294,7 @@ public class WinkClient {
     HttpGet request = null;
     try {
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + rowId + MANIFEST_URI_FRAGMENT;
+      String agg_uri = getRowLevelFileManifestUri(uri, appId, tableId, schemaETag, rowId);
       System.out.println("getManifestForRow: agg uri is " + agg_uri);
 
       request = new HttpGet(agg_uri);
@@ -2271,8 +2354,7 @@ public class WinkClient {
     }
 
     // No Row Id for bulk upload
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
 
     ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
@@ -2369,8 +2451,7 @@ public class WinkClient {
     JSONObject rowObj = null;
 
     // No Row Id for bulk upload
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
 
     ArrayList<Row> rowArrayList = new ArrayList<Row>();
 
@@ -2526,8 +2607,7 @@ public class WinkClient {
     }
 
     // No Row Id for bulk upload
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
 
     // Make sure that the first line of the csv file
     // has the right header
@@ -2681,8 +2761,7 @@ public class WinkClient {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
 
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
     System.out.println("updateRowsUsingBulkUpload: agg_uri is " + agg_uri);
 
     if (batchSize == 0) {
@@ -2753,8 +2832,7 @@ public class WinkClient {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
 
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
     System.out.println("deleteRowsUsingBulkUpload: agg_uri is " + agg_uri);
 
     if (batchSize == 0) {
@@ -2832,8 +2910,7 @@ public class WinkClient {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
 
-    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+    String agg_uri = getTableIdRowsUri(uri, appId, tableId, schemaETag);
     System.out.println("alterRowsUsingSingleBatch: agg_uri is " + agg_uri);
 
     try {
@@ -2907,9 +2984,7 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + FILE_URI_FRAGMENT
-          + relativePathOnServer;
+      String agg_uri = getRowIdFileUriWithRelPathUri(uri, appId, tableId, schemaETag, userRowId, relativePathOnServer);
 
       if (asAttachment) {
         agg_uri = agg_uri + AS_ATTACHMENT_URI_FRAGMENT;
@@ -3103,8 +3178,7 @@ public class WinkClient {
 
     HttpPost request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + DOWNLOAD_FRAGMENT;
+      String agg_uri = getRowIdAttachmentsDownloadUri(uri, appId, tableId, schemaETag, userRowId);
 
       System.out.println("batchGetFilesForRow: agg_uri is " + agg_uri);
 
@@ -3115,7 +3189,7 @@ public class WinkClient {
       
       HttpResponse response = null;
       
-      response = this.httpRequestExecute(request, mimeMapping.get(JSON_STR), true);
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), true);
 
       System.out.println("batchGetFilesForRow: client response is "
           + response.getStatusLine().getStatusCode() + ":"
@@ -3244,9 +3318,7 @@ public class WinkClient {
 
     HttpPost request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + FILE_URI_FRAGMENT
-          + relativePathOnServer;
+      String agg_uri = getRowIdFileUriWithRelPathUri(uri, appId, tableId, schemaETag, userRowId, relativePathOnServer);
       System.out.println("putFileForRow: agg_uri is " + agg_uri);
 
       File file = new File(wholePathToFile);
@@ -3262,7 +3334,7 @@ public class WinkClient {
       request = new HttpPost(agg_uri);
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
-      String contentType = this.determineContentType(file.getName());
+      String contentType = determineContentType(file.getName());
       
       HttpResponse response = null;
 
@@ -3333,8 +3405,7 @@ public class WinkClient {
     try {
       // RestClient restClient = new RestClient();
 
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + QUERY_URI_FRAGMENT + LAST_UPDATE_DATE_URI_FRAGMENT;
+      String agg_uri = getTableIdLastUpdateDateQueryUri(uri, appId, tableId, schemaETag);
 
       agg_uri = agg_uri + "?" + START_TIME_QUERY_PARAM + startTime;
 
@@ -3417,8 +3488,7 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
-          + REF_URI_FRAGMENT + schemaETag + QUERY_URI_FRAGMENT + SAVEPOINT_TIMESTAMP_URI;
+      String agg_uri = getTableIdSavepointTimestampQueryUri(uri, appId, tableId, schemaETag);
 
       agg_uri = agg_uri + "?" + START_TIME_QUERY_PARAM + startTime;
 
