@@ -860,16 +860,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
       System.out.println("getManifestForAppLevelFiles: result is " + obj.toString());
 
     } finally {
@@ -1166,16 +1157,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
 
       System.out.println("getTables: result is " + obj.toString());
     } finally {
@@ -1184,6 +1166,22 @@ public class WinkClient {
       }
     }
 
+    return obj;
+  }
+
+  private JSONObject convertResponseToJSONObject(HttpResponse response) throws IOException,
+      JSONException {
+    JSONObject obj;
+    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+        .getContent(), Charset.forName(UTF8_STR)));
+    StringBuilder strLine = new StringBuilder();
+    String resLine;
+    while ((resLine = rd.readLine()) != null) {
+      strLine.append(resLine);
+    }
+    String res = strLine.toString();
+
+    obj = new JSONObject(res);
     return obj;
   }
 
@@ -1220,16 +1218,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
 
       System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
 
@@ -1723,16 +1712,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
 
       System.out.println("getTableDefinition: result is for tableId " + tableId
           + " and schemaEtag " + schemaETag + " is " + obj.toString());
@@ -1825,16 +1805,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
       System.out.println("getTableIdManifest: result for " + tableId + " is " + obj.toString());
     } finally {
       if (request != null) {
@@ -1931,16 +1902,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String tableRes = strLine.toString();
-
-      obj = new JSONObject(tableRes);
+      obj = convertResponseToJSONObject(response);
       System.out.println("getRowsSince: result for " + tableId + " is " + obj.toString());
     } finally {
       if (request != null) {
@@ -2014,16 +1976,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String tableRes = strLine.toString();
-
-      obj = new JSONObject(tableRes);
+      obj = convertResponseToJSONObject(response);
       System.out.println("getRows: result for " + tableId + " is " + obj.toString());
 
     } catch (Exception e) {
@@ -2203,16 +2156,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String tableRes = strLine.toString();
-
-      obj = new JSONObject(tableRes);
+      obj = convertResponseToJSONObject(response);
       System.out.println("getRow: result for table " + tableId + " row " + rowId + " is "
           + obj.toString());
     } finally {
@@ -2283,16 +2227,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String res = strLine.toString();
-
-      obj = new JSONObject(res);
+      obj = convertResponseToJSONObject(response);
 
       System.out.println("getManifestForRow: result for " + tableId + " with rowId " + rowId
           + " is " + obj.toString());
@@ -3439,16 +3374,7 @@ public class WinkClient {
       
       response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String tableRes = strLine.toString();
-
-      obj = new JSONObject(tableRes);
+      obj = convertResponseToJSONObject(response);
       System.out.println("queryRowsInTimeRangeWithLastUpdateDate: result for " + tableId + " is "
           + obj.toString());
     } finally {
@@ -3530,16 +3456,7 @@ public class WinkClient {
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
 
-      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName(UTF8_STR)));
-      StringBuilder strLine = new StringBuilder();
-      String resLine;
-      while ((resLine = rd.readLine()) != null) {
-        strLine.append(resLine);
-      }
-      String tableRes = strLine.toString();
-
-      obj = new JSONObject(tableRes);
+      obj = convertResponseToJSONObject(response);
       System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId
           + " is " + obj.toString());
     } finally {
