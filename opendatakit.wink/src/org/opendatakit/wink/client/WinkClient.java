@@ -4,6 +4,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -61,6 +62,7 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
 import org.opendatakit.aggregate.odktables.rest.entity.Scope;
+import org.opendatakit.aggregate.odktables.rest.entity.Error.ErrorType;
 import org.apache.commons.fileupload.MultipartStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -70,142 +72,155 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.SocketConfig;
 
 /**
- * Class used to communicate with the ODK and Mezuri servers
- * via the REST API.  This class uploads data 
- * to the server and downloads data from the server.
- *   
+ * Class used to communicate with the ODK and Mezuri servers via the REST API.
+ * This class uploads data to the server and downloads data from the server.
+ * 
  * @author clarlars@gmail.com
- *
+ * 
  */
 public class WinkClient {
-  public static final String queryParamDataETag = "data_etag=";
-
-  public static final String queryParamFetchLimit = "fetchLimit=";
-
-  public static final String queryParamCursor = "cursor=";
+  public static final String TAG = "WinkClient";
   
-  public static final String queryParamStartTime = "startTime=";
+  public static final String ASSETS_DIR = "assets";
   
-  public static final String queryParamEndTime = "endTime=";
-
-  public static final String t = "WinkClient";
-
-  public static String uriFilesFragment = "/files/";
-
-  public static final String uriTablesFragment = "/tables";
-
-  public static String uriManifest = "/manifest/";
+  public static final String TABLES_DIR = "tables";
   
-  public static final String uriLastUpdateDateFragment = "/lastUpdateDate";
+  public static final String FILES_STR = "files";
   
-  public static final String uriSavepointTimestamp = "/savepointTimestamp";
+  public static final String UTF8_STR = "UTF-8";
   
-  public static final String uriQueryFragment = "/query";
-
-  public static final String uriRefFragment = "/ref/";
-
-  public static final String uriRowsFragment = "/rows";
-
-  public static final String uriAttachmentsFragment = "/attachments/";
-
-  public static final String uriFileFragment = "/file/";
+  public static String FILENAME_STR = "filename";
   
-  public static final String downloadFragment = "/download";
+  public static final String INSTANCES_DIR = "instances";
 
-  public static final String uriManifestFragment = "/manifest";
+  public static final String DATA_ETAG_QUERY_PARAM = "data_etag=";
 
-  public static final String uriRowETagFragment = "?row_etag=";
+  public static final String FETCH_LIMIT_QUERY_PARAM = "fetchLimit=";
 
-  public static final String uriAsAttachmentFragment = "?as_attachment=true";
+  public static final String CURSOR_QUERY_PARAM = "cursor=";
 
-  public static final String separator = "/";
+  public static final String START_TIME_QUERY_PARAM = "startTime=";
+
+  public static final String END_TIME_QUERY_PARAM = "endTime=";
+
+  public static final String FILES_URI_FRAGMENT = "/files/";
+
+  public static final String TABLES_URI_FRAGMENT = "/tables";
+
+  public static final String MANIFEST_URI = "/manifest/";
+
+  public static final String LAST_UPDATE_DATE_URI_FRAGMENT = "/lastUpdateDate";
+
+  public static final String SAVEPOINT_TIMESTAMP_URI = "/savepointTimestamp";
+
+  public static final String QUERY_URI_FRAGMENT = "/query";
+
+  public static final String REF_URI_FRAGMENT = "/ref/";
+
+  public static final String ROWS_URI_FRAGMENT = "/rows";
+
+  public static final String ATTACHMENTS_URI_FRAGMENT = "/attachments/";
+
+  public static final String FILE_URI_FRAGMENT = "/file/";
+
+  public static final String DOWNLOAD_FRAGMENT = "/download";
+
+  public static final String MANIFEST_URI_FRAGMENT = "/manifest";
+
+  public static final String ROW_ETAG_URI_FRAGMENT = "?row_etag=";
+
+  public static final String AS_ATTACHMENT_URI_FRAGMENT = "?as_attachment=true";
+
+  public static final String SEPARATOR_STR = "/";
 
   // Maybe better to have a function to map this?
-  public static final String jsonElemKey = "elementKey";
+  public static final String ELEM_KEY_JSON = "elementKey";
 
-  public static final String jsonElemName = "elementName";
+  public static final String ELEM_NAME_JSON = "elementName";
 
-  public static final String jsonElemType = "elementType";
+  public static final String ELEM_TYPE_JSON = "elementType";
 
-  public static final String jsonListChildElemKeys = "listChildElementKeys";
+  public static final String LIST_CHILD_ELEM_KEYS_JSON = "listChildElementKeys";
 
-  public static final String tableDefElemKey = "_element_key";
+  public static final String ELEM_KEY_TABLE_DEF = "_element_key";
 
-  public static final String tableDefElemName = "_element_name";
+  public static final String ELEM_NAME_TABLE_DEF = "_element_name";
 
-  public static final String tableDefElemType = "_element_type";
+  public static final String ELEM_TYPE_TABLE_DEF = "_element_type";
 
-  public static final String tableDefListChildElemKeys = "_list_child_element_keys";
+  public static final String LIST_CHILD_ELEM_KEYS_TABLE_DEF = "_list_child_element_keys";
 
   // Row definitions - mapping here?
-  public static final String jsonId = "id";
+  public static final String ID_JSON = "id";
 
-  public static final String jsonFormId = "formId";
+  public static final String FORM_ID_JSON = "formId";
 
-  public static final String jsonLocale = "locale";
+  public static final String LOCALE_JSON = "locale";
 
-  public static final String jsonSavepointType = "savepointType";
+  public static final String SAVEPOINT_TYPE_JSON = "savepointType";
 
-  public static final String jsonSavepointTimestamp = "savepointTimestamp";
+  public static final String SAVEPOINT_TIMESTAMP_JSON = "savepointTimestamp";
 
-  public static final String jsonSavepointCreator = "savepointCreator";
+  public static final String SAVEPOINT_CREATOR_JSON = "savepointCreator";
 
-  public static final String jsonRowETag = "rowETag";
+  public static final String ROW_ETAG_JSON = "rowETag";
 
-  public static final String jsonRowsString = "rows";
-  
-  public static final String jsonFilterScope = "filterScope";
-  
-  public static final String jsonTableId = "tableId";
-  
-  public static final String jsonTables = "tables";
-  
-  public static final String jsonSchemaETag = "schemaETag";
-  
-  public static final String jsonDataETag = "dataETag";
+  public static final String ROWS_STR_JSON = "rows";
 
-  public static final String jsonWebSafeResumeCursor = "webSafeResumeCursor";
+  public static final String FILTER_SCOPE_JSON = "filterScope";
 
-  public static final String jsonHasMoreResults = "hasMoreResults";
+  public static final String TABLE_ID_JSON = "tableId";
 
-  public static final String rowDefId = "_id";
+  public static final String TABLES_JSON = "tables";
 
-  public static final String rowDefFormId = "_form_id";
+  public static final String SCHEMA_ETAG_JSON = "schemaETag";
 
-  public static final String rowDefLocale = "_locale";
+  public static final String DATA_ETAG_JSON = "dataETag";
 
-  public static final String rowDefSavepointType = "_savepoint_type";
+  public static final String WEB_SAFE_RESUME_CURSOR_JSON = "webSafeResumeCursor";
 
-  public static final String rowDefSavepointTimestamp = "_savepoint_timestamp";
+  public static final String HAS_MORE_RESULTS_JSON = "hasMoreResults";
 
-  public static final String rowDefSavepointCreator = "_savepoint_creator";
+  public static final String ID_ROW_DEF = "_id";
 
-  public static final String rowDefRowETag = "_row_etag";
+  public static final String FORM_ID_ROW_DEF = "_form_id";
 
-  public static final String rowDefFilterType = "_filter_type";
+  public static final String LOCALE_ROW_DEF = "_locale";
 
-  public static final String rowDefFilterValue = "_filter_value";
+  public static final String SAVEPOINT_TYPE_ROW_DEF = "_savepoint_type";
 
-  public static final String orderedColumnsDef = "orderedColumns";
-  
-  public static final String defaultFetchLimit = "1000";
-  
+  public static final String SAVEPOINT_TIMESTAMP_ROW_DEF = "_savepoint_timestamp";
+
+  public static final String SAVEPOINT_CREATOR_ROW_DEF = "_savepoint_creator";
+
+  public static final String ROW_ETAG_ROW_DEF = "_row_etag";
+
+  public static final String FILTER_TYPE_ROW_DEF = "_filter_type";
+
+  public static final String FILTER_VALUE_ROW_DEF = "_filter_value";
+
+  public static final String ORDERED_COLUMNS_DEF = "orderedColumns";
+
+  public static final String DFEAULT_FETCH_LIMIT = "1000";
+
   public static final String BOUNDARY = "boundary";
-  
-  protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
-  
-  public static final String multipartFileHeader = "filename=\"";
-  
+
+  public static final String MULTIPART_FILE_HEADER = "filename=\"";
+
   public static final int MAX_BATCH_SIZE = 10485760;
+
+  public static final String TYPE_STR = "type";
+
+  protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
   private CloseableHttpClient httpClient = null;
 
   private HttpContext localContext = null;
 
   private CookieStore cookieStore = null;
-  
+
   private CredentialsProvider credsProvider = null;
-  
+
   static Map<String, String> mimeMapping;
 
   static {
@@ -262,81 +277,89 @@ public class WinkClient {
     }
     return mimeType;
   }
-  
+
   /**
-   * Init client with default parameters 
+   * Init client with default parameters
    * 
    */
   public void init() {
     httpClient = HttpClientBuilder.create().build();
-	  
+
   }
-  
+
   /**
    * Init client with parameters for digest auth
    * 
-   * @param host the host name to authenticate against
-   * @param userName the user name to use for authentication 
-   * @param password the password to use for authentication
+   * @param host
+   *          the host name to authenticate against
+   * @param userName
+   *          the user name to use for authentication
+   * @param password
+   *          the password to use for authentication
    */
   public void init(String host, String userName, String password) {
     int CONNECTION_TIMEOUT = 60000;
- 
-    // Context 
+
+    // Context
     // context holds authentication state machine, so it cannot be
     // shared across independent activities.
     localContext = new BasicHttpContext();
 
     cookieStore = new BasicCookieStore();
     credsProvider = new BasicCredentialsProvider();
-    
-    //AuthScope a = new AuthScope("adapt.epi-ucsf.org", -1, null, AuthPolicy.DIGEST);
+
     AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
     Credentials c = new UsernamePasswordCredentials(userName, password);
     credsProvider.setCredentials(a, c);
-    
+
     localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
     localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
-    
-    SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT).setSoTimeout(2*CONNECTION_TIMEOUT).build();
-	  
+
+    SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT)
+        .setSoTimeout(2 * CONNECTION_TIMEOUT).build();
+
     // if possible, bias toward digest auth (may not be in 4.0 beta 2)
     List<String> targetPreferredAuthSchemes = new ArrayList<String>();
     targetPreferredAuthSchemes.add(AuthSchemes.DIGEST);
     targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
 
-    RequestConfig requestConfig = RequestConfig.copy(RequestConfig.DEFAULT)
+    RequestConfig requestConfig = RequestConfig
+        .copy(RequestConfig.DEFAULT)
         .setConnectTimeout(CONNECTION_TIMEOUT)
         // support authenticating
         .setAuthenticationEnabled(true)
         // support redirecting to handle http: => https: transition
         .setRedirectsEnabled(true)
         // max redirects is set to 4
-        .setMaxRedirects(4)
-        .setCircularRedirectsAllowed(true)
+        .setMaxRedirects(4).setCircularRedirectsAllowed(true)
         .setTargetPreferredAuthSchemes(targetPreferredAuthSchemes)
-        .setCookieSpec(CookieSpecs.DEFAULT)
-        .build();
-	
-    httpClient = HttpClientBuilder.create()
-        .setDefaultSocketConfig(socketConfig)
+        .setCookieSpec(CookieSpecs.DEFAULT).build();
+
+    httpClient = HttpClientBuilder.create().setDefaultSocketConfig(socketConfig)
         .setDefaultRequestConfig(requestConfig).build();
   }
-  
+
   /**
-   * Init client parameters for authentication  
+   * Init client parameters for authentication
    * 
-   * @param host the host to authenticate against
-   * @param userName the user name  to use for auth
-   * @param password the password to use for auth
-   * @param socketConfig the socket config parameters to use
-   * @param reqConfig the request config parameters to use
-   * @param basicStore the cookie store to use 
-   * @param basicProvider the credentials provider to use
+   * @param host
+   *          the host to authenticate against
+   * @param userName
+   *          the user name to use for auth
+   * @param password
+   *          the password to use for auth
+   * @param socketConfig
+   *          the socket config parameters to use
+   * @param reqConfig
+   *          the request config parameters to use
+   * @param basicStore
+   *          the cookie store to use
+   * @param basicProvider
+   *          the credentials provider to use
    */
   public void init(String host, String userName, String password, SocketConfig socketConfig,
       RequestConfig reqConfig, BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
-	  
+
     localContext = new BasicHttpContext();
 
     if (basicStore != null) {
@@ -344,10 +367,10 @@ public class WinkClient {
       localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
     }
 
-    if  (basicProvider != null) {
+    if (basicProvider != null) {
       credsProvider = basicProvider;
     }
-    
+
     if (credsProvider != null && userName != null && password != null && host != null) {
       AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
       Credentials c = new UsernamePasswordCredentials(userName, password);
@@ -357,42 +380,43 @@ public class WinkClient {
     if (credsProvider != null) {
       localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
     }
-    
+
     HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-    
+
     if (socketConfig != null) {
-    	clientBuilder.setDefaultSocketConfig(socketConfig);	
+      clientBuilder.setDefaultSocketConfig(socketConfig);
     }
-    
+
     if (reqConfig != null) {
-       clientBuilder.setDefaultRequestConfig(reqConfig);	
+      clientBuilder.setDefaultRequestConfig(reqConfig);
     }
-    
+
     httpClient = clientBuilder.build();
-   
+
   }
-  
+
   /**
-   * Gets the schemaETag for the table   
+   * Gets the schemaETag for the table
    * 
-   * @param agg_url the url for the server
-   * @param appId the application id 
-   * @param tableId the table id for the table in question
+   * @param agg_url
+   *          the url for the server
+   * @param appId
+   *          the application id
+   * @param tableId
+   *          the table id for the table in question
    * @return String to return schemaETag value
    */
   public String getSchemaETagForTable(String agg_url, String appId, String tableId) {
 
     try {
-      //WinkClient wc = new WinkClient();
-      //JSONObject obj = wc.getTables(agg_url, appId);
       JSONObject obj = getTables(agg_url, appId);
 
-      JSONArray tables = obj.getJSONArray(jsonTables);
+      JSONArray tables = obj.getJSONArray(TABLES_JSON);
 
       for (int i = 0; i < tables.size(); i++) {
         JSONObject table = tables.getJSONObject(i);
-        if (tableId.equals(table.getString(jsonTableId))) {
-          return table.getString(jsonSchemaETag);
+        if (tableId.equals(table.getString(TABLE_ID_JSON))) {
+          return table.getString(SCHEMA_ETAG_JSON);
         }
       }
 
@@ -402,46 +426,96 @@ public class WinkClient {
 
     return null;
   }
+  
+  public String getTableDefinitionFilePath(String dir, String tableId) {
+    String tableDefinitionFileCSVPath = getTableIdDirPath(dir, tableId) 
+        + File.separator + "definition.csv";
+    
+    return tableDefinitionFileCSVPath;
+  }
+  
+  public String getTableDataCSVFilePath(String dir, String tableId) {
+    String tableDataCSVFilePath = getAssetsDirPath(dir)   
+        + File.separator + "csv" + File.separator + tableId + ".csv";
+    
+    return tableDataCSVFilePath;
+  }
+  
+  public String getTableInstancesDirPath(String dir, String tableId) {
+    String tableInstancesDirPath = this.getTableIdDirPath(dir, tableId) 
+        + File.separator + INSTANCES_DIR;
+    
+    return tableInstancesDirPath;
+  }
+  
+  public String getTableIdDirPath(String dir, String tableId) {
+    String tableIdDirPath =  getTablesDirPath(dir) + File.separator + tableId;
+    
+    return tableIdDirPath;
+  }
+  
+  public String getTablesDirPath(String dir) {
+    String tableDirPath = dir + File.separator + TABLES_DIR;
+    
+    return tableDirPath;
+  }
+  
+  public String getAssetsDirPath(String dir) {
+    String assetsDirPath = dir + File.separator + ASSETS_DIR;
+    
+    return assetsDirPath;
+  }
+  
+  public String getRowInstanceFilePath(String dir, String tableId, String rowId, String fileName) {
+    String rowInstanceFilePath = getTableIdDirPath(dir, tableId) + File.separator + INSTANCES_DIR 
+        + File.separator + rowId + File.separator + fileName;
+    
+    return rowInstanceFilePath;
+  }
 
   /**
-   * Gets all data from a uri on the server and saves
-   * the data to the specified directory.  First, app level and 
-   * table level files are retrieved and saved to the directory.  
-   * Then the definition.csv and data.csv files for all of the tables
-   * are saved.  Finally, any row level attachments are saved.   
+   * Gets all data from a uri on the server and saves the data to the specified
+   * directory. First, app level and table level files are retrieved and saved
+   * to the directory. Then the definition.csv and data.csv files for all of the
+   * tables are saved. Finally, any row level attachments are saved.
    * 
-   * @param uri the url for the server
-   * @param appId the application id 
-   * @param dirToSaveDataTo the directory in which the data will be saved
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          the application id
+   * @param dirToSaveDataTo
+   *          the directory in which the data will be saved
+   * @param version
+   *          ODK version code, 1 or 2
+   * @throws ClientProtocolException
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws JSONException
    */
   public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo, String version)
-      throws Exception {
+      throws ClientProtocolException, FileNotFoundException, IOException, JSONException {
 
     // Get all App Level Files
     getAllAppLevelFilesFromUri(uri, appId, dirToSaveDataTo, version);
 
     // Get all the Tables
     JSONObject tableRes = getTables(uri, appId);
-    JSONArray tables = tableRes.getJSONArray("tables");
+    JSONArray tables = tableRes.getJSONArray(TABLES_JSON);
 
     for (int i = 0; i < tables.size(); i++) {
       JSONObject table = tables.getJSONObject(i);
-      String tableId = table.getString("tableId");
-      String schemaETag = table.getString("schemaETag");
+      String tableId = table.getString(TABLE_ID_JSON);
+      String schemaETag = table.getString(SCHEMA_ETAG_JSON);
 
       // Get all Table Level Files
       getAllTableLevelFilesFromUri(uri, appId, tableId, dirToSaveDataTo, version);
 
       // Write out Table Definition CSV's
-      String tableDefinitionCSVPath = dirToSaveDataTo + separator + "tables" + separator + tableId
-          + separator + "definition.csv";
-      writeTableDefinitionToCSV(uri, appId, tableId, schemaETag, tableDefinitionCSVPath);
+      String tableDefCSVPath = getTableDefinitionFilePath(dirToSaveDataTo, tableId);
+      writeTableDefinitionToCSV(uri, appId, tableId, schemaETag, tableDefCSVPath);
 
       // Write out the Table Data CSV's
-      String dataCSVPath = dirToSaveDataTo + separator + "assets" + separator + "csv" + separator
-          + tableId + ".csv";
+      String dataCSVPath = getTableDataCSVFilePath(dirToSaveDataTo, tableId);
       writeRowDataToCSV(uri, appId, tableId, schemaETag, dataCSVPath);
 
       // Get all Instance Files
@@ -451,12 +525,12 @@ public class WinkClient {
   }
 
   /**
-   * Descends into the directory tree and
-   * find all of the files
+   * Descends into the directory tree and find all of the files
    * 
-   * @param dir a file object defining the top level directory
+   * @param dir
+   *          a file object defining the top level directory
    * @return an ArrayList of strings for all of the file paths
-   **/   
+   **/
   public ArrayList<String> recurseDir(File dir) {
     ArrayList<String> filePaths = new ArrayList<String>();
     File listFile[] = dir.listFiles();
@@ -474,10 +548,10 @@ public class WinkClient {
   }
 
   /**
-   * Finds the top level subdirectories within
-   * the specified directory
+   * Finds the top level subdirectories within the specified directory
    * 
-   * @param dir file object of the top directory
+   * @param dir
+   *          file object of the top directory
    * @return an ArrayList of strings for all of the top leve directories
    **/
   public ArrayList<String> findTopLevelSubdirectories(File dir) {
@@ -494,44 +568,51 @@ public class WinkClient {
   }
 
   /**
-   * Pushes all data from a directory to the server.  
+   * Pushes all data from a directory to the server.
    * <p>
-   * App level files must be in a subdirectory named "assets".  
+   * App level files must be in a subdirectory named "assets".
    * <p>
-   * Table definitions must be in
-   * a subdirectory named "tables/{tableName}.  
-   * For example, a definition.csv file
-   * for a table named test must be in folder tables/test.  
+   * Table definitions must be in a subdirectory named "tables/{tableName}. For
+   * example, a definition.csv file for a table named test must be in folder
+   * tables/test.
    * <p>
-   * Row attachments must be 
-   * in a folder named tables/{tableName}/instances/{rowId}.  
-   * For example, an image.jpg file
-   * for rowId 1f9e6f19_c50a_4436_9328_1d70cdb73493 of test table would be in 
-   * tables/test/instances/1f9e6f19_c50a_4436_9328_1d70cdb73493.  
-   * If the rowId contains anything other than alphanumeric characters, 
-   * the directory name for the rowId will be converted to 
-   * replace the non-alphanumeric characters to underscores.  
-   * For example, row id 1f9e6f19-c50a-4436-9328-1d70cdb73493 
+   * Row attachments must be in a folder named
+   * tables/{tableName}/instances/{rowId}. For example, an image.jpg file for
+   * rowId 1f9e6f19_c50a_4436_9328_1d70cdb73493 of test table would be in
+   * tables/test/instances/1f9e6f19_c50a_4436_9328_1d70cdb73493. If the rowId
+   * contains anything other than alphanumeric characters, the directory name
+   * for the rowId will be converted to replace the non-alphanumeric characters
+   * to underscores. For example, row id 1f9e6f19-c50a-4436-9328-1d70cdb73493
    * will be converted to 1f9e6f19_c50a_4436_9328_1d70cdb73493.
-   * @param uri the url for the server
-   * @param appId the application id 
-   * @param dirToGetDataFrom the directory that has the data to push to the server
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          the application id
+   * @param dirToGetDataFrom
+   *          the directory that has the data to push to the server
+   * @param version
+   *          ODK version code, 1 or 2
+   * @throws ClientProtocolException
+   * @throws DataFormatException
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws JSONException
    */
   public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom, String version)
-      throws Exception {
+      throws ClientProtocolException, DataFormatException, FileNotFoundException, IOException,
+      JSONException {
     ArrayList<String> assetsFiles;
     ArrayList<String> tableFiles;
     ArrayList<String> tableIds;
     ArrayList<String> instanceFiles = new ArrayList<String>();
 
     // Get all files in the assets directory
-    String assetsDir = dirToGetDataFrom + File.separator + "assets";
+    String assetsDir = getAssetsDirPath(dirToGetDataFrom);
     assetsFiles = recurseDir(new File(assetsDir));
 
     // Get all the tableIds in the tables directory
-    String tablesDir = dirToGetDataFrom + File.separator + "tables";
+    String tablesDir = getTablesDirPath(dirToGetDataFrom);
     tableIds = findTopLevelSubdirectories(new File(tablesDir));
 
     for (int i = 0; i < tableIds.size(); i++) {
@@ -539,46 +620,46 @@ public class WinkClient {
       JSONObject tableResult = null;
       String schemaETag = null;
       String tableId = tableIds.get(i);
-      String tableDefPath = tablesDir + File.separator + tableId + File.separator + "definition.csv";
+      
+      String tableDefPath = getTableDefinitionFilePath(dirToGetDataFrom, tableId);
       File tableDefCSV = new File(tableDefPath);
       if (tableDefCSV.exists()) {
         tableResult = createTableWithCSV(uri, appId, tableId, "", tableDefPath);
-        if (!tableResult.isNull("schemaETag")) {
-          schemaETag = tableResult.getString("schemaETag");
+        if (!tableResult.isNull(SCHEMA_ETAG_JSON)) {
+          schemaETag = tableResult.getString(SCHEMA_ETAG_JSON);
         }
       }
 
       // Create table rows
-      String dataRowPath = assetsDir + File.separator + "csv" + File.separator + tableId + ".csv";
+      String dataRowPath = getTableDataCSVFilePath(dirToGetDataFrom, tableId);
       File dataRowCSV = new File(dataRowPath);
       if (dataRowCSV.exists()) {
-        // createRowsUsingCSV(uri, appId, tableId, schemaETag, dataRowPath);
-        int fLimit = Integer.parseInt(defaultFetchLimit);
+        int fLimit = Integer.parseInt(DFEAULT_FETCH_LIMIT);
         createRowsUsingCSVBulkUpload(uri, appId, tableId, schemaETag, dataRowPath, fLimit);
       }
 
-      LinkedHashMap <String, String> mapRowIdToInstanceDir = new LinkedHashMap<String, String> ();
-      
+      LinkedHashMap<String, String> mapRowIdToInstanceDir = new LinkedHashMap<String, String>();
+
       JSONObject obj = null;
       String resumeCursor = null;
-       do {
-         // Get all of the rowId's for the table
-         obj = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
-         JSONArray rows = obj.getJSONArray(jsonRowsString);
-         for (int k = 0; k < rows.size(); k++) {
-           JSONObject row = rows.getJSONObject(k);
-           String rowId = row.getString("id");
-           mapRowIdToInstanceDir.put(convertRowIdForInstances(rowId), rowId);
-         }
+      do {
+        // Get all of the rowId's for the table
+        obj = getRows(uri, appId, tableId, schemaETag, resumeCursor, DFEAULT_FETCH_LIMIT);
+        JSONArray rows = obj.getJSONArray(ROWS_STR_JSON);
+        for (int k = 0; k < rows.size(); k++) {
+          JSONObject row = rows.getJSONObject(k);
+          String rowId = row.getString(ID_JSON);
+          mapRowIdToInstanceDir.put(convertRowIdForInstances(rowId), rowId);
+        }
 
-        resumeCursor = obj.optString(jsonWebSafeResumeCursor);
-      } while(obj.getBoolean(jsonHasMoreResults));
-      
+        resumeCursor = obj.optString(WEB_SAFE_RESUME_CURSOR_JSON);
+      } while (obj.getBoolean(HAS_MORE_RESULTS_JSON));
+
       // Find table Id Files and push up
-      String tableIdPath = tablesDir + File.separator + tableId;
+      String tableIdPath = getTableIdDirPath(dirToGetDataFrom, tableId);
       tableFiles = recurseDir(new File(tableIdPath));
 
-      String tableInstancesPath = tableIdPath + File.separator + "instances";
+      String tableInstancesPath = getTableInstancesDirPath(dirToGetDataFrom, tableId);
       for (int j = 0; j < tableFiles.size(); j++) {
         if (tableFiles.get(j).startsWith(tableInstancesPath)) {
           instanceFiles.add(tableFiles.get(j));
@@ -597,8 +678,7 @@ public class WinkClient {
         String instanceRowId = parentPath.substring(parentPath.lastIndexOf(File.separator) + 1);
         String rowIdToUse = mapRowIdToInstanceDir.get(instanceRowId);
         // Relative path is just file name here
-        putFileForRow(uri, appId, tableId, schemaETag, rowIdToUse, filePath,
-            instanceFile.getName());
+        putFileForRow(uri, appId, tableId, schemaETag, rowIdToUse, filePath, instanceFile.getName());
       }
     }
 
@@ -610,163 +690,186 @@ public class WinkClient {
   }
 
   /**
-   * Gets all of the instance files (attachments) for a table   
-   * and saves them to the specified directory
+   * Gets all of the instance files (attachments) for a table and saves them to
+   * the specified directory
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param dirToSaveDataTo the directory in which the data will be saved
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dirToSaveDataTo
+   *          the directory in which the data will be saved
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public void getAllTableInstanceFilesFromUri(String uri, String appId, String tableId,
-      String schemaETag, String dirToSaveDataTo) throws Exception {
+      String schemaETag, String dirToSaveDataTo) throws IOException, JSONException {
 
     // Get all rows for table
     JSONObject row = null;
     String resumeCursor = null;
     do {
-      row = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
-      //JSONObject row = getRows(uri, appId, tableId, schemaETag, null, defaultFetchLimit);
-      JSONArray tableRows = row.getJSONArray(jsonRowsString);
+      row = getRows(uri, appId, tableId, schemaETag, resumeCursor, DFEAULT_FETCH_LIMIT);
+      
+      JSONArray tableRows = row.getJSONArray(ROWS_STR_JSON);
 
       for (int i = 0; i < tableRows.size(); i++) {
         JSONObject tableRow = tableRows.getJSONObject(i);
-        String rowId = tableRow.getString("id");
+        String rowId = tableRow.getString(ID_JSON);
         JSONObject files = null;
         try {
           files = getManifestForRow(uri, appId, tableId, schemaETag, rowId);
         } catch (Exception e) {
           e.printStackTrace();
           if (files == null) {
-            System.out.println("getAllTableInstanceFilesFromUri: known issue with table:" + tableId + " row: " + rowId + " causes exception");
+            System.out.println("getAllTableInstanceFilesFromUri: known issue with table:" + tableId
+                + " row: " + rowId + " causes exception");
             continue;
           }
         }
-        JSONArray rowFiles = files.getJSONArray("files");
+        JSONArray rowFiles = files.getJSONArray(FILES_STR);
 
         for (int j = 0; j < rowFiles.size(); j++) {
           JSONObject rowFile = rowFiles.getJSONObject(j);
-          String fileName = rowFile.getString("filename");
+          String fileName = rowFile.getString(FILENAME_STR);
 
           // Convert rowId for Aggregate
           String rowIdForSave = convertRowIdForInstances(rowId);
-          String pathToSaveFile = dirToSaveDataTo + separator + "tables" + separator + tableId
-            + separator + "instances" + separator + rowIdForSave + separator + fileName;
+          String pathToSaveFile = getRowInstanceFilePath(dirToSaveDataTo, tableId, rowIdForSave, fileName);
           // Should relativeDir be set here
           getFileForRow(uri, appId, tableId, schemaETag, rowId, false, pathToSaveFile, fileName);
         }
       }
-      resumeCursor = row.optString(jsonWebSafeResumeCursor);
-    }while(row.getBoolean(jsonHasMoreResults));
+      resumeCursor = row.optString(WEB_SAFE_RESUME_CURSOR_JSON);
+    } while (row.getBoolean(HAS_MORE_RESULTS_JSON));
   }
 
   /**
-   * Gets all of the table level files for a single table 
-   * and saves them to the specified directory
+   * Gets all of the table level files for a single table and saves them to the
+   * specified directory
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param dirToSaveDataTo the directory in which the data will be saved
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param dirToSaveDataTo
+   *          the directory in which the data will be saved
+   * @param version
+   *          ODK version code, 1 or 2
+   * @throws ClientProtocolException
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws JSONException
    */
   public void getAllTableLevelFilesFromUri(String uri, String appId, String tableId,
-      String dirToSaveDataTo, String version) throws Exception {
+      String dirToSaveDataTo, String version) throws ClientProtocolException,
+      FileNotFoundException, IOException, JSONException {
     String relativeDir;
     JSONObject file;
 
     // Get all table level files
     JSONObject table = getManifestForTableId(uri, appId, tableId, version);
-    JSONArray tableLevelFiles = table.getJSONArray("files");
+    JSONArray tableLevelFiles = table.getJSONArray(FILES_STR);
 
     for (int i = 0; i < tableLevelFiles.size(); i++) {
       file = tableLevelFiles.getJSONObject(i);
-      relativeDir = file.getString("filename");
-      String pathToSaveFile = dirToSaveDataTo + separator + relativeDir;
+      relativeDir = file.getString(FILENAME_STR);
+      String pathToSaveFile = dirToSaveDataTo + File.separator + relativeDir;
       downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
 
   /**
-   * Gets all of the app level files and 
-   * saves them to the specified directory
+   * Gets all of the app level files and saves them to the specified directory
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param dirToSaveDataTo the directory in which the data will be saved
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param dirToSaveDataTo
+   *          the directory in which the data will be saved
+   * @param version
+   *          ODK version code, 1 or 2
+   * @throws ClientProtocolException
+   * @throws FileNotFoundException
+   * @throws IOExceptionJSONException
+   * @throws JSONException
    */
   public void getAllAppLevelFilesFromUri(String uri, String appId, String dirToSaveDataTo,
-      String version) throws Exception {
+      String version) throws ClientProtocolException, FileNotFoundException, IOException,
+      JSONException {
     String relativeDir;
     JSONObject file;
 
     // Get all App Level Files
     JSONObject app = getManifestForAppLevelFiles(uri, appId, version);
-    JSONArray appLevelFiles = app.getJSONArray("files");
+    JSONArray appLevelFiles = app.getJSONArray(FILES_STR);
 
     for (int i = 0; i < appLevelFiles.size(); i++) {
       file = appLevelFiles.getJSONObject(i);
-      relativeDir = file.getString("filename");
-      String pathToSaveFile = dirToSaveDataTo + separator + relativeDir;
+      relativeDir = file.getString(FILENAME_STR);
+      String pathToSaveFile = dirToSaveDataTo + File.separator + relativeDir;
       downloadFile(uri, appId, pathToSaveFile, relativeDir, version);
     }
   }
 
   /**
-   * Gets the manifest for the app level files
-   * and returns that list in a JSONObject
+   * Gets the manifest for the app level files and returns that list in a
+   * JSONObject
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param version ODK version code, 1 or 2
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param version
+   *          ODK version code, 1 or 2
    * @return JSONObject of the list of app level files
-   * @throws Exception any exception encountered is thrown to the caller
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
    */
   public JSONObject getManifestForAppLevelFiles(String uri, String appId, String version)
-      throws Exception {
+      throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-      //RestClient restClient = new RestClient();
-      String agg_uri = uri + separator + appId + uriManifest + version;
+      String agg_uri = uri + SEPARATOR_STR + appId + MANIFEST_URI + version;
       System.out.println("getManifestForAppLevelFiles: agg_uri is " + agg_uri);
-      
-      //Resource tableResource = restClient.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
-         response = httpClient.execute(request);
+        response = httpClient.execute(request);
       }
-    
-      //String tableRes = tableResource.accept("application/json").get(String.class);
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String res = strLine.toString();
-    
-      
-      //obj = new JSONObject(tableRes);
+
       obj = new JSONObject(res);
       System.out.println("getManifestForAppLevelFiles: result is " + obj.toString());
 
@@ -779,22 +882,30 @@ public class WinkClient {
   }
 
   /**
-   * Uploads a file to the server.  App level or table
-   * level files can be uploaded via this method.  The only 
-   * difference between the two is the relative path on the server.
+   * Uploads a file to the server. App level or table level files can be
+   * uploaded via this method. The only difference between the two is the
+   * relative path on the server.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param wholePathToFile the file path for the file to upload
-   * @param relativePathOnServer the relative path on the server where
-   * the file will be stored
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param wholePathToFile
+   *          the file path for the file to upload
+   * @param relativePathOnServer
+   *          the relative path on the server where the file will be stored
+   * @param version
+   *          ODK version code, 1 or 2
+   * @throws Exception
+   *           any exception encountered is thrown to the caller
    * @return Http response status code
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
    */
   public int uploadFile(String uri, String appId, String wholePathToFile,
-      String relativePathOnServer, String version) throws Exception {
-    
+      String relativePathOnServer, String version) throws ClientProtocolException, IOException {
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
@@ -813,55 +924,47 @@ public class WinkClient {
 
     HttpPost request = null;
     try {
-      String uriRelativePath =
-          relativePathOnServer.replaceAll(File.separator + File.separator, separator);
-      String agg_uri =
-          uri + separator + appId + uriFilesFragment + version + separator + uriRelativePath;
+      String uriRelativePath = relativePathOnServer.replaceAll(File.separator + File.separator,
+          SEPARATOR_STR);
+      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
+          + uriRelativePath;
       System.out.println("uploadFile: agg uri is " + agg_uri);
-  
+
       File file = new File(wholePathToFile);
       if (!file.exists()) {
         System.out.println("uploadFile: file " + wholePathToFile + " does not exist");
         return -1;
       }
-  
-      //InputStream in = new FileInputStream(file);
+
       byte[] data = Files.readAllBytes(file.toPath());
-  
-      // create the rest client instance
-      //RestClient client = new RestClient();
-  
-      // create the resource instance to interact with
-      //Resource resource = client.resource(agg_uri);
+
       request = new HttpPost(agg_uri);
-  
+
       // issue the request
       String contentType = this.determineContentType(file.getName());
-      //InputStream response = resource.contentType(contentType).accept(contentType)
-      //    .post(InputStream.class, in);
       request.addHeader("content-type", contentType + "; charset=utf-8");
       request.addHeader("accept", contentType);
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
+
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
-      
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       System.out.println("uploadFile: response for file " + wholePathToFile + " is ");
-  
-      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), 
-          Charset.forName("UTF-8")));
+
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
       String line;
       while ((line = responseBuff.readLine()) != null)
         System.out.println(line);
-      //in.close();
+      // in.close();
 
       return response.getStatusLine().getStatusCode();
     } finally {
@@ -873,26 +976,35 @@ public class WinkClient {
   }
 
   /**
-   * Downloads a file to the server.  App level or table
-   * level files can be downloaded via this method.  The only 
-   * difference between the two is the relative path on the server.
+   * Downloads a file to the server. App level or table level files can be
+   * downloaded via this method. The only difference between the two is the
+   * relative path on the server.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param pathToSaveFile the file path where the file should be downloaded
-   * @param relativePathOnServer the relative path on the server where
-   * the file is stored
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param pathToSaveFile
+   *          the file path where the file should be downloaded
+   * @param relativePathOnServer
+   *          the relative path on the server where the file is stored
+   * @param version
+   *          ODK version code, 1 or 2
+   * 
    * @return Http response status code
+   * 
+   * @throws ClientProtocolException
+   * @throws FileNotFoundException
+   * @throws IOException
    */
   public int downloadFile(String uri, String appId, String pathToSaveFile,
-      String relativePathOnServer, String version) throws Exception {
+      String relativePathOnServer, String version) throws ClientProtocolException,
+      FileNotFoundException, IOException {
 
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-    
+
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("downloadFile: uri cannot be null");
     }
@@ -907,27 +1019,21 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri =
-          uri + separator + appId + uriFilesFragment + version + separator + relativePathOnServer;
+      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
+          + relativePathOnServer;
       System.out.println("downloadFile: agg_uri is " + agg_uri);
-  
+
       // File to save
       File file = new File(pathToSaveFile);
-  
-      // create the rest client instance
-      //RestClient client = new RestClient();
-  
-      // create the resource instance to interact with
-      //Resource resource = client.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
-  
+
       String accept = determineContentType(file.getName());
       request.addHeader("content-type", accept + "; charset=utf-8");
       request.addHeader("accept", accept);
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
-      //InputStream fis = resource.accept(accept).get(InputStream.class);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
@@ -935,21 +1041,21 @@ public class WinkClient {
         response = httpClient.execute(request);
       }
       System.out.println("downloadFile: issued get request for " + relativePathOnServer);
-  
+
       file.getParentFile().mkdirs();
       if (!file.exists()) {
         file.createNewFile();
       }
-  
+
       InputStream fis = response.getEntity().getContent();
-  
+
       FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
       byte[] buffer = new byte[1024];
       int len;
       while ((len = fis.read(buffer)) > 0) {
         fos.write(buffer, 0, len);
       }
-      
+
       fos.close();
       fis.close();
 
@@ -962,19 +1068,25 @@ public class WinkClient {
   }
 
   /**
-   * Deletes an app level file or a table level file 
-   * off the server
+   * Deletes an app level file or a table level file off the server
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param relativePathOnServer the relative path on the server where
-   * the file is stored
-   * @param version ODK version code, 1 or 2
-   * @throws Exception any exception encountered during this function
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param relativePathOnServer
+   *          the relative path on the server where the file is stored
+   * @param version
+   *          ODK version code, 1 or 2
+   *          
    * @return HTTP response status code
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * 
    */
   public int deleteFile(String uri, String appId, String relativePathOnServer, String version)
-      throws Exception {
+      throws ClientProtocolException, IOException {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: uri cannot be null");
     }
@@ -982,36 +1094,33 @@ public class WinkClient {
     if (relativePathOnServer == null || relativePathOnServer.isEmpty()) {
       throw new IllegalArgumentException("deleteFile: relativePathOnServer cannot be null");
     }
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-    
+
     HttpDelete request = null;
     try {
-      String agg_uri =
-          uri + separator + appId + uriFilesFragment + version + separator + relativePathOnServer;
+      String agg_uri = uri + SEPARATOR_STR + appId + FILES_URI_FRAGMENT + version + SEPARATOR_STR
+          + relativePathOnServer;
       System.out.println("deleteFile: agg_uri is " + agg_uri);
-  
-      //RestClient restClient = new RestClient();
-  
-      //Resource resource = restClient.resource(agg_uri);
+
       request = new HttpDelete(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-  
-      //ClientResponse response = resource.accept("application/json").delete();
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
-      System.out.println("deleteFile: client response is " + response.getStatusLine().getStatusCode() + ":" +
-          response.getStatusLine().getReasonPhrase());
+
+      System.out.println("deleteFile: client response is "
+          + response.getStatusLine().getStatusCode() + ":"
+          + response.getStatusLine().getReasonPhrase());
 
       return response.getStatusLine().getStatusCode();
     } finally {
@@ -1022,56 +1131,59 @@ public class WinkClient {
   }
 
   /**
-   * Returns a list of tables currently on the
-   * server in a JSONObject
+   * Returns a list of tables currently on the server in a JSONObject
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
    * @return a JSONObject with the list of tables
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public JSONObject getTables(String uri, String appId) throws Exception {
+  public JSONObject getTables(String uri, String appId) throws ClientProtocolException,
+      IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-    //RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment;
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT;
 
-    System.out.println("getTables: agg uri is " + agg_uri);
+      System.out.println("getTables: agg uri is " + agg_uri);
 
-    //Resource resource = restClient.resource(agg_uri);
-    request = new HttpGet(agg_uri);
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
 
-    //String res = resource.accept("application/json").get(String.class);
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String res = strLine.toString();
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
 
-    obj = new JSONObject(res);
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
 
-    System.out.println("getTables: result is " + obj.toString());
+      obj = new JSONObject(res);
+
+      System.out.println("getTables: result is " + obj.toString());
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -1082,79 +1194,103 @@ public class WinkClient {
   }
 
   /**
-   * Returns table data for the specified tableId
-   * in a JSONObject
+   * Returns table data for the specified tableId in a JSONObject
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
    * @return a JSONObject with the representation of the table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public JSONObject getTable(String uri, String appId, String tableId) throws Exception {
+  public JSONObject getTable(String uri, String appId, String tableId)
+      throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-    //RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
-    System.out.println("getTable: agg uri is " + agg_uri);
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
+      System.out.println("getTable: agg uri is " + agg_uri);
 
-    //Resource resource = restClient.resource(agg_uri);
-    request = new HttpGet(agg_uri);
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
-    
-    //String res = resource.accept("application/json").get(String.class);
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String res = strLine.toString();
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
 
-    obj = new JSONObject(res);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
 
-    System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+
+      obj = new JSONObject(res);
+
+      System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
+
+      // Check to see if the table was not found
+      // If the table was not found return null
+      if (obj.has(TYPE_STR)) {
+        String errorType = obj.getString(TYPE_STR);
+        if (errorType != null && errorType.length() > 0) {
+          if (errorType.equals(ErrorType.RESOURCE_NOT_FOUND.toString())) {
+            return null;
+          }
+        }
+      }
+
     } finally {
       if (request != null) {
         request.releaseConnection();
       }
     }
     return obj;
-  }
-  
+  };
+
   /**
-   * Returns table data eTag for the specified tableId
-   * in a JSONObject
+   * Returns table data eTag for the specified tableId in a JSONObject
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
    * @return a JSONObject with the representation of the table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public String getTableDataETag(String uri, String appId, String tableId) throws Exception {
+  public String getTableDataETag(String uri, String appId, String tableId)
+      throws ClientProtocolException, IOException, JSONException {
     String dataETag = null;
-    
+
     JSONObject tableRes = getTable(uri, appId, tableId);
-    dataETag = (tableRes.has(jsonDataETag) && !tableRes.isNull(jsonDataETag)) ? tableRes.getString(jsonDataETag) : null;
+    dataETag = (tableRes.has(DATA_ETAG_JSON) && !tableRes.isNull(DATA_ETAG_JSON)) ? tableRes
+        .getString(DATA_ETAG_JSON) : null;
 
     System.out.println("getTableDataETag: result is for tableId " + tableId + " is " + dataETag);
 
@@ -1162,25 +1298,34 @@ public class WinkClient {
   }
 
   /**
-   * Creates a table on the server with the specified
-   * tableId and columns.  schemaETag should be null if
-   * a new table is being created.
+   * Creates a table on the server with the specified tableId and columns.
+   * schemaETag should be null if a new table is being created.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param columns an ArrayList of Column objects which define the columns of the table
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param columns
+   *          an ArrayList of Column objects which define the columns of the
+   *          table
    * @return a JSONObject with the representation of the newly created table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public JSONObject createTable(String uri, String appId, String tableId, String schemaETag,
-      ArrayList<Column> columns) throws Exception {
+      ArrayList<Column> columns) throws ClientProtocolException, IOException, JSONException {
     JSONObject tableObj = new JSONObject();
     JSONArray cols = new JSONArray();
     JSONObject col;
     JSONObject result = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
@@ -1199,56 +1344,52 @@ public class WinkClient {
 
     HttpPut request = null;
     try {
-      //RestClient restClient = new RestClient();
-  
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
+
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
       System.out.println("createTable: agg_uri is " + agg_uri);
-  
+
       // Add the columns to the table object
       for (int i = 0; i < columns.size(); i++) {
         col = new JSONObject();
-        col.put("elementKey", columns.get(i).getElementKey());
-        col.put("elementName", columns.get(i).getElementName());
-        col.put("elementType", columns.get(i).getElementType());
-        col.put("listChildElementKeys", columns.get(i).getListChildElementKeys());
+        col.put(ELEM_KEY_JSON, columns.get(i).getElementKey());
+        col.put(ELEM_NAME_JSON, columns.get(i).getElementName());
+        col.put(ELEM_TYPE_JSON, columns.get(i).getElementType());
+        col.put(LIST_CHILD_ELEM_KEYS_JSON, columns.get(i).getListChildElementKeys());
         cols.add(col);
       }
-  
-      tableObj.put("schemaETag", schemaETag);
-      tableObj.put("tableId", tableId);
-      tableObj.put("orderedColumns", cols);
-  
+
+      tableObj.put(SCHEMA_ETAG_JSON, schemaETag);
+      tableObj.put(TABLE_ID_JSON, tableId);
+      tableObj.put(ORDERED_COLUMNS_DEF, cols);
+
       System.out.println("createTable: with object " + tableObj.toString());
-  
-      //Resource resource = restClient.resource(agg_uri);
+
       request = new HttpPut(agg_uri);
-      StringEntity params = new StringEntity(tableObj.toString(), "UTF-8");
+      StringEntity params = new StringEntity(tableObj.toString(), UTF8_STR);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
       request.setEntity(params);
-      
-      //String res = resource.accept("application/json").contentType("application/json")
-      //    .put(String.class, tableObj.toString());
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String res = strLine.toString();
-  
+
       System.out.println("createTable: result is for tableId " + tableId + " is " + res.toString());
-  
+
       result = new JSONObject(res);
     } finally {
       if (request != null) {
@@ -1258,26 +1399,36 @@ public class WinkClient {
 
     return result;
   }
-  
+
   /**
-   * Creates a table on the server with the specified
-   * tableId and JSONObject.  schemaETag should be null if
-   * a new table is being created.
+   * Creates a table on the server with the specified tableId and JSONObject.
+   * schemaETag should be null if a new table is being created.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param jsonTableCreationObject a jsonObject that holds the values used to create a table definition
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param jsonTableCreationObject
+   *          a jsonObject that holds the values used to create a table
+   *          definition
    * @return a JSONObject with the representation of the newly created table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException 
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public JSONObject createTableWithJSON(String uri, String appId, String tableId, String schemaETag,
-      String jsonTableCreationObject) throws Exception {
+  public JSONObject createTableWithJSON(String uri, String appId, String tableId,
+      String schemaETag, String jsonTableCreationObject) throws ClientProtocolException,
+      IOException, JSONException {
     JSONObject tableObj = new JSONObject();
     JSONObject col;
     JSONObject result = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
@@ -1291,85 +1442,94 @@ public class WinkClient {
     }
 
     if (jsonTableCreationObject == null || jsonTableCreationObject.isEmpty()) {
-      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject cannot be null");
+      throw new IllegalArgumentException(
+          "createTableWithJSON: jsonTableCreationObject cannot be null");
     }
 
     HttpPut request = null;
     try {
-    //RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId;
-    System.out.println("createTableWithJSON: agg_uri is " + agg_uri);
-    
-    tableObj = new JSONObject(jsonTableCreationObject);
-    
-    if (!tableObj.containsKey("schemaETag")) {
-      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have schemaETag");
-    }
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId;
+      System.out.println("createTableWithJSON: agg_uri is " + agg_uri);
 
-    if (!tableObj.containsKey("tableId")) {
-      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have tableId");
-    }
-    
-    if (!tableObj.containsKey("orderedColumns")) {
-      throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does not have orderedColumns");
-    }
-    
-    JSONArray columns = tableObj.getJSONArray("orderedColumns");
-    
-    // Add the columns to the table object
-    for (int i = 0; i < columns.size(); i++) {
-      col = columns.getJSONObject(i);
-      
-      if (!col.containsKey("elementKey")) {
-        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementKey");
+      tableObj = new JSONObject(jsonTableCreationObject);
+
+      if (!tableObj.containsKey(SCHEMA_ETAG_JSON)) {
+        throw new IllegalArgumentException(
+            "createTableWithJSON: jsonTableCreationObject does not have schemaETag");
       }
-      
-      if (!col.containsKey("elementName")) {
-        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementName");
+
+      if (!tableObj.containsKey(TABLE_ID_JSON)) {
+        throw new IllegalArgumentException(
+            "createTableWithJSON: jsonTableCreationObject does not have tableId");
       }
-      
-      if (!col.containsKey("elementType")) {
-        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have elementType");
+
+      if (!tableObj.containsKey(ORDERED_COLUMNS_DEF)) {
+        throw new IllegalArgumentException(
+            "createTableWithJSON: jsonTableCreationObject does not have orderedColumns");
       }
-      
-      if (!col.containsKey("listChildElementKeys")) {
-        throw new IllegalArgumentException("createTableWithJSON: jsonTableCreationObject does orderedColumns " + i + " does not have listChildElementKeys");
+
+      JSONArray columns = tableObj.getJSONArray(ORDERED_COLUMNS_DEF);
+
+      // Add the columns to the table object
+      for (int i = 0; i < columns.size(); i++) {
+        col = columns.getJSONObject(i);
+
+        if (!col.containsKey(ELEM_KEY_JSON)) {
+          throw new IllegalArgumentException(
+              "createTableWithJSON: jsonTableCreationObject does orderedColumns " + i
+                  + " does not have elementKey");
+        }
+
+        if (!col.containsKey(ELEM_NAME_JSON)) {
+          throw new IllegalArgumentException(
+              "createTableWithJSON: jsonTableCreationObject does orderedColumns " + i
+                  + " does not have elementName");
+        }
+
+        if (!col.containsKey(ELEM_TYPE_JSON)) {
+          throw new IllegalArgumentException(
+              "createTableWithJSON: jsonTableCreationObject does orderedColumns " + i
+                  + " does not have elementType");
+        }
+
+        if (!col.containsKey(LIST_CHILD_ELEM_KEYS_JSON)) {
+          throw new IllegalArgumentException(
+              "createTableWithJSON: jsonTableCreationObject does orderedColumns " + i
+                  + " does not have listChildElementKeys");
+        }
       }
-    }
 
-    System.out.println("createTableWithJSON: with object " + tableObj.toString());
+      System.out.println("createTableWithJSON: with object " + tableObj.toString());
 
-    //Resource resource = restClient.resource(agg_uri);
-    request = new HttpPut(agg_uri);
-    StringEntity params = new StringEntity(tableObj.toString(), "UTF-8");
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
-    request.setEntity(params);
-    
-    //String res = resource.accept("application/json").contentType("application/json")
-    //    .put(String.class, tableObj.toString());
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String res = strLine.toString();
+      request = new HttpPut(agg_uri);
+      StringEntity params = new StringEntity(tableObj.toString(), UTF8_STR);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+      request.setEntity(params);
 
-    System.out.println("createTableWithJSON: result is for tableId " + tableId + " is " + res.toString());
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
 
-    result = new JSONObject(res);
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+
+      System.out.println("createTableWithJSON: result is for tableId " + tableId + " is "
+          + res.toString());
+
+      result = new JSONObject(res);
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -1380,61 +1540,80 @@ public class WinkClient {
   }
 
   /**
-   * Creates a table on the server with the specified
-   * tableId using a csv file which specifies the table
-   * definition.  
-   * schemaETag should be null if a new table is being 
-   * created.
+   * Creates a table on the server with the specified tableId using a csv file
+   * which specifies the table definition. schemaETag should be null if a new
+   * table is being created.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvFilePath file path to the definition.csv file 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvFilePath
+   *          file path to the definition.csv file
    * @return a JSONObject with the representation of the newly created table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws DataFormatException
+   * @throws FileNotFoundException
+   * @throws IOException,
+   * @throws JSONException
+   * 
    */
   public JSONObject createTableWithCSV(String uri, String appId, String tableId, String schemaETag,
-      String csvFilePath) throws Exception {
+      String csvFilePath) throws DataFormatException, FileNotFoundException, IOException,
+      JSONException {
     ArrayList<Column> cols = new ArrayList<Column>();
     RFC4180CsvReader reader;
 
     File file = new File(csvFilePath);
     if (!file.exists()) {
-      throw new IllegalArgumentException("createTableWithCSV: file " + csvFilePath + " does not exist");
+      throw new IllegalArgumentException("createTableWithCSV: file " + csvFilePath
+          + " does not exist");
     }
     InputStream in = new FileInputStream(file);
-    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName(UTF8_STR));
     reader = new RFC4180CsvReader(inputStream);
 
     return createTableWithCSVProcessing(uri, appId, tableId, schemaETag, cols, reader);
   }
-  
+
   /**
-   * Creates a table on the server with the specified
-   * tableId using a file input stream.  
-   * schemaETag should be null if a new table is being 
-   * created.
+   * Creates a table on the server with the specified tableId using a file input
+   * stream. schemaETag should be null if a new table is being created.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvInputStream input stream for a table definition csv file 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvInputStream
+   *          input stream for a table definition csv file
    * @return a JSONObject with the representation of the newly created table
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws DataFormatException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public JSONObject createTableWithCSVInputStream(String uri, String appId, String tableId, String schemaETag,
-      InputStream csvInputStream) throws Exception {
+  public JSONObject createTableWithCSVInputStream(String uri, String appId, String tableId,
+      String schemaETag, InputStream csvInputStream) throws DataFormatException, IOException,
+      JSONException {
     ArrayList<Column> cols = new ArrayList<Column>();
     RFC4180CsvReader reader;
 
     if (csvInputStream.available() <= 0) {
-      throw new IllegalArgumentException("createTableWithCSVInputStream: csvInputStream is not available");
+      throw new IllegalArgumentException(
+          "createTableWithCSVInputStream: csvInputStream is not available");
     }
-    
+
     InputStream in = csvInputStream;
-    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName(UTF8_STR));
     reader = new RFC4180CsvReader(inputStream);
 
     return createTableWithCSVProcessing(uri, appId, tableId, schemaETag, cols, reader);
@@ -1442,7 +1621,7 @@ public class WinkClient {
 
   private JSONObject createTableWithCSVProcessing(String uri, String appId, String tableId,
       String schemaETag, ArrayList<Column> cols, RFC4180CsvReader reader) throws IOException,
-      DataFormatException, Exception {
+      DataFormatException, JSONException {
     Column col;
     JSONObject resultingTable;
     // Make sure that the first line of the csv file
@@ -1456,9 +1635,9 @@ public class WinkClient {
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[0].equals(tableDefElemKey) || !firstLine[1].equals(tableDefElemName)
-        || !firstLine[2].equals(tableDefElemType)
-        || !firstLine[3].equals(tableDefListChildElemKeys)) {
+    if (!firstLine[0].equals(ELEM_KEY_TABLE_DEF) || !firstLine[1].equals(ELEM_NAME_TABLE_DEF)
+        || !firstLine[2].equals(ELEM_TYPE_TABLE_DEF)
+        || !firstLine[3].equals(LIST_CHILD_ELEM_KEYS_TABLE_DEF)) {
       throw new DataFormatException(
           "The csv file used to create a table does not have the correct columns in the first row");
     }
@@ -1478,18 +1657,27 @@ public class WinkClient {
   }
 
   /**
-   * Writes out the table definition for the 
-   * specified tableId to a csv file
+   * Writes out the table definition for the specified tableId to a csv file
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvFilePath file path in which to save the table definition
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvFilePath
+   *          file path in which to save the table definition
+   *          
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public void writeTableDefinitionToCSV(String uri, String appId, String tableId,
-      String schemaETag, String csvFilePath) throws Exception {
+      String schemaETag, String csvFilePath) throws ClientProtocolException, IOException,
+      JSONException {
     RFC4180CsvWriter writer;
 
     File file = new File(csvFilePath);
@@ -1505,23 +1693,23 @@ public class WinkClient {
     writer = new RFC4180CsvWriter(fw);
 
     JSONObject tableDef = getTableDefinition(uri, appId, tableId, schemaETag);
-    JSONArray orderedColumns = tableDef.getJSONArray(orderedColumnsDef);
+    JSONArray orderedColumns = tableDef.getJSONArray(ORDERED_COLUMNS_DEF);
     String[] colArray = new String[4];
 
     // Create the first row of the csv
-    colArray[0] = tableDefElemKey;
-    colArray[1] = tableDefElemName;
-    colArray[2] = tableDefElemType;
-    colArray[3] = tableDefListChildElemKeys;
+    colArray[0] = ELEM_KEY_TABLE_DEF;
+    colArray[1] = ELEM_NAME_TABLE_DEF;
+    colArray[2] = ELEM_TYPE_TABLE_DEF;
+    colArray[3] = LIST_CHILD_ELEM_KEYS_TABLE_DEF;
 
     writer.writeNext(colArray);
 
     for (int i = 0; i < orderedColumns.size(); i++) {
       JSONObject col = orderedColumns.getJSONObject(i);
-      colArray[0] = col.getString(jsonElemKey);
-      colArray[1] = col.getString(jsonElemName);
-      colArray[2] = col.getString(jsonElemType);
-      colArray[3] = col.getString(jsonListChildElemKeys);
+      colArray[0] = col.getString(ELEM_KEY_JSON);
+      colArray[1] = col.getString(ELEM_NAME_JSON);
+      colArray[2] = col.getString(ELEM_TYPE_JSON);
+      colArray[3] = col.getString(LIST_CHILD_ELEM_KEYS_JSON);
       writer.writeNext(colArray);
     }
     writer.close();
@@ -1529,62 +1717,65 @@ public class WinkClient {
   }
 
   /**
-   * Gets the table definition and returns a
-   * JSONObject for the specified tableId and 
-   * schemaETag
+   * Gets the table definition and returns a JSONObject for the specified
+   * tableId and schemaETag
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
    * @return a JSONObject with the table definition
-   * @throws Exception any exception encountered is thrown to the caller
+   *          
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   *            
    */
   public JSONObject getTableDefinition(String uri, String appId, String tableId, String schemaETag)
-      throws Exception {
+      throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-    //RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag;
-    System.out.println("getTableDefinition: agg uri is " + agg_uri);
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag;
+      System.out.println("getTableDefinition: agg uri is " + agg_uri);
 
-    //Resource resource = restClient.resource(agg_uri);
-    request = new HttpGet(agg_uri);
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
-    
-    //String res = resource.accept("application/json").contentType("application/json")
-    //    .get(String.class);
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String res = strLine.toString();
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
 
-    obj = new JSONObject(res);
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
 
-    System.out.println("getTableDefinition: result is for tableId " + tableId + " and schemaEtag "
-        + schemaETag + " is " + obj.toString());
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+
+      obj = new JSONObject(res);
+
+      System.out.println("getTableDefinition: result is for tableId " + tableId
+          + " and schemaEtag " + schemaETag + " is " + obj.toString());
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -1595,47 +1786,51 @@ public class WinkClient {
   }
 
   /**
-   * Deletes the table definition for a specified
-   * tableId and schemaETag 
+   * Deletes the table definition for a specified tableId and schemaETag
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @throws Exception any exception encountered during this function
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   *          
    * @return Http response status code
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * 
    */
   public int deleteTableDefinition(String uri, String appId, String tableId, String schemaETag)
-      throws Exception {
+      throws ClientProtocolException, IOException {
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpDelete request = null;
     try {
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag;
-  
-      //RestClient restClient = new RestClient();
-  
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag;
+
       System.out.println("deleteTableDefinition: agg_uri is " + agg_uri);
-      //Resource resource = restClient.resource(agg_uri);
+
       request = new HttpDelete(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-  
-      //ClientResponse response = resource.accept("application/json").delete();
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      System.out.println("deleteTableDefinition: client response is " + 
-          response.getStatusLine().getStatusCode() + ":" + 
-          response.getStatusLine().getReasonPhrase());
+      System.out.println("deleteTableDefinition: client response is "
+          + response.getStatusLine().getStatusCode() + ":"
+          + response.getStatusLine().getReasonPhrase());
 
       return response.getStatusLine().getStatusCode();
     } finally {
@@ -1647,51 +1842,55 @@ public class WinkClient {
   }
 
   /**
-   * Returns a JSONObject with the list of 
-   * table level files for a given tableId
+   * Returns a JSONObject with the list of table level files for a given tableId
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param version ODK version code, 1 or 2
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param version
+   *          ODK version code, 1 or 2
    * @return a JSONObject with the list of table level files
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public JSONObject getManifestForTableId(String uri, String appId, String tableId, String version)
-      throws Exception {
+      throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
 
     HttpGet request = null;
     try {
-      //RestClient restClient = new RestClient();
-  
-      String agg_uri = uri + separator + appId + uriManifest + version + separator + tableId;
+
+      String agg_uri = uri + SEPARATOR_STR + appId + MANIFEST_URI + version + SEPARATOR_STR + tableId;
       System.out.println("getManifestForTableId: agg uri is " + agg_uri);
-  
-      //Resource resource = restClient.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-  
-      //String res = resource.accept("application/json").get(String.class);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String res = strLine.toString();
-  
+
       obj = new JSONObject(res);
       System.out.println("getTableIdManifest: result for " + tableId + " is " + obj.toString());
     } finally {
@@ -1704,26 +1903,35 @@ public class WinkClient {
   }
 
   /**
-   * Returns a JSONObject of the rows that can 
-   * be found in a table since the given
-   * dataETag for the specified tableId and 
-   * schemaETag
+   * Returns a JSONObject of the rows that can be found in a table since the
+   * given dataETag for the specified tableId and schemaETag
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param cursor query parameter that identifies the point at which to 
-   * resume the query
-   * @param fetchLimit query parameter that defines the number of rows to 
-   * return
-   * @param dataETag query parameter that defines the point at which 
-   * to start getting rows
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
+   * @param dataETag
+   *          query parameter that defines the point at which to start getting
+   *          rows
    * @return a JSONObject with the row data
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public JSONObject getRowsSince(String uri, String appId, String tableId, String schemaETag,
-      String cursor, String fetchLimit, String dataETag) throws Exception {
+      String cursor, String fetchLimit, String dataETag) throws ClientProtocolException,
+      IOException, JSONException {
     JSONObject obj = null;
     boolean useCursor = false;
     boolean useFetchLimit = false;
@@ -1732,74 +1940,71 @@ public class WinkClient {
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-    
+
     HttpGet request = null;
     try {
-      //RestClient restClient = new RestClient();
-  
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriRowsFragment;
-  
+
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
+
       if (cursor != null && !cursor.isEmpty()) {
         useCursor = true;
       }
-  
+
       if (fetchLimit != null && !fetchLimit.isEmpty()) {
         useFetchLimit = true;
       }
-  
+
       if (dataETag != null && !dataETag.isEmpty()) {
         useDataETag = true;
       }
-  
+
       if (useCursor || useFetchLimit || useDataETag) {
         agg_uri = agg_uri + "?";
       }
-  
+
       if (useCursor) {
-        agg_uri = agg_uri + queryParamCursor + cursor;
+        agg_uri = agg_uri + CURSOR_QUERY_PARAM + cursor;
         if (useFetchLimit || useDataETag) {
           agg_uri = agg_uri + "&";
         }
       }
-  
+
       if (useFetchLimit) {
-        agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
+        agg_uri = agg_uri + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
         if (useDataETag) {
           agg_uri = agg_uri + "&";
         }
       }
-  
+
       if (useDataETag) {
-        agg_uri = agg_uri + queryParamDataETag + dataETag;
+        agg_uri = agg_uri + DATA_ETAG_QUERY_PARAM + dataETag;
       }
-  
-      //Resource tableResource = restClient.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
+
       System.out.println("getRowsSince: agg uri is " + agg_uri);
-  
-      //String tableRes = tableResource.accept("application/json").get(String.class);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String tableRes = strLine.toString();
-      
+
       obj = new JSONObject(tableRes);
       System.out.println("getRowsSince: result for " + tableId + " is " + obj.toString());
     } finally {
@@ -1812,17 +2017,22 @@ public class WinkClient {
   }
 
   /**
-   * Returns a JSONObject of the rows in a table 
-   * for the specified tableId and schemaETag
+   * Returns a JSONObject of the rows in a table for the specified tableId and
+   * schemaETag
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param cursor query parameter that identifies the point at which to 
-   * resume the query
-   * @param fetchLimit query parameter that defines the number of rows to 
-   * return
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
    * @return a JSONObject with the row data
    */
   public JSONObject getRows(String uri, String appId, String tableId, String schemaETag,
@@ -1830,18 +2040,16 @@ public class WinkClient {
     JSONObject obj = null;
     boolean useCursor = false;
     boolean useFetchLimit = false;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-    
+
     HttpGet request = null;
     try {
-      
-      //RestClient restClient = new RestClient();
 
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriRowsFragment;
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
 
       if (cursor != null && !cursor.isEmpty()) {
         useCursor = true;
@@ -1854,43 +2062,41 @@ public class WinkClient {
       if (useCursor || useFetchLimit) {
         agg_uri = agg_uri + "?";
       }
-      
+
       if (useFetchLimit) {
-        agg_uri = agg_uri + queryParamFetchLimit + fetchLimit;
+        agg_uri = agg_uri + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
         if (useCursor)
           agg_uri = agg_uri + "&";
       }
 
       if (useCursor) {
-        agg_uri = agg_uri + queryParamCursor + cursor;
+        agg_uri = agg_uri + CURSOR_QUERY_PARAM + cursor;
       }
 
-      //Resource tableResource = restClient.resource(agg_uri);
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
+
       System.out.println("getRows: agg uri is " + agg_uri);
 
-      //String tableRes = tableResource.accept("application/json").get(String.class);
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String tableRes = strLine.toString();
-      
+
       obj = new JSONObject(tableRes);
       System.out.println("getRows: result for " + tableId + " is " + obj.toString());
 
@@ -1905,38 +2111,44 @@ public class WinkClient {
   }
 
   /**
-   * Writes out the row data for a given
-   * tableId and schemaETag to a csv
-   * file
+   * Writes out the row data for a given tableId and schemaETag to a csv file
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvFilePath the csv file path in which to write the row data
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvFilePath
+   *          the csv file path in which to write the row data
+   *          
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public void writeRowDataToCSV(String uri, String appId, String tableId, String schemaETag,
-      String csvFilePath) throws Exception {
-	  
+      String csvFilePath) throws IOException, JSONException {
+
     RFC4180CsvWriter writer;
     JSONObject rowWrapper;
     String resumeCursor = null;
 
-    rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
+    rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, DFEAULT_FETCH_LIMIT);
 
-    JSONArray rows = rowWrapper.getJSONArray(jsonRowsString);
-    
+    JSONArray rows = rowWrapper.getJSONArray(ROWS_STR_JSON);
+
     if (rows.size() <= 0) {
-    	System.out.println("writeRowDataToCSV: There are no rows to write out!");
-    	return;
+      System.out.println("writeRowDataToCSV: There are no rows to write out!");
+      return;
     }
-    
+
     File file = new File(csvFilePath);
     if (!file.exists()) {
       file.createNewFile();
     }
-    
+
     // This fileWriter could be causing the issue with
     // UTF-8 characters - should probably use an OutputStream
     // here instead
@@ -1944,69 +2156,69 @@ public class WinkClient {
     writer = new RFC4180CsvWriter(fw);
 
     JSONObject repRow = rows.getJSONObject(0);
-    JSONArray orderedColumnsRep = repRow.getJSONArray(orderedColumnsDef);
+    JSONArray orderedColumnsRep = repRow.getJSONArray(ORDERED_COLUMNS_DEF);
     int numberOfColsToMake = 9 + orderedColumnsRep.size();
     String[] colArray = new String[numberOfColsToMake];
 
     int i = 0;
-    colArray[i++] = rowDefId;
-    colArray[i++] = rowDefFormId;
-    colArray[i++] = rowDefLocale;
-    colArray[i++] = rowDefSavepointType;
-    colArray[i++] = rowDefSavepointTimestamp;
-    colArray[i++] = rowDefSavepointCreator;
+    colArray[i++] = ID_ROW_DEF;
+    colArray[i++] = FORM_ID_ROW_DEF;
+    colArray[i++] = LOCALE_ROW_DEF;
+    colArray[i++] = SAVEPOINT_TYPE_ROW_DEF;
+    colArray[i++] = SAVEPOINT_TIMESTAMP_ROW_DEF;
+    colArray[i++] = SAVEPOINT_CREATOR_ROW_DEF;
 
     for (int j = 0; j < orderedColumnsRep.size(); j++) {
       JSONObject obj = orderedColumnsRep.getJSONObject(j);
       colArray[i++] = obj.getString("column");
     }
 
-    colArray[i++] = rowDefRowETag;
-    colArray[i++] = rowDefFilterType;
-    colArray[i++] = rowDefFilterValue;
+    colArray[i++] = ROW_ETAG_ROW_DEF;
+    colArray[i++] = FILTER_TYPE_ROW_DEF;
+    colArray[i++] = FILTER_VALUE_ROW_DEF;
 
     writer.writeNext(colArray);
 
     do {
-      rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, defaultFetchLimit);
+      rowWrapper = getRows(uri, appId, tableId, schemaETag, resumeCursor, DFEAULT_FETCH_LIMIT);
 
-      rows = rowWrapper.getJSONArray(jsonRowsString);
-      
+      rows = rowWrapper.getJSONArray(ROWS_STR_JSON);
+
       writeOutFetchLimitRows(writer, rows, colArray);
-      
-      resumeCursor = rowWrapper.optString(jsonWebSafeResumeCursor);
-      
-    } while (rowWrapper.getBoolean(jsonHasMoreResults));
+
+      resumeCursor = rowWrapper.optString(WEB_SAFE_RESUME_CURSOR_JSON);
+
+    } while (rowWrapper.getBoolean(HAS_MORE_RESULTS_JSON));
 
     writer.close();
   }
 
-  private void writeOutFetchLimitRows(RFC4180CsvWriter writer, JSONArray rows,
-      String[] colArray) throws JSONException, IOException {
+  private void writeOutFetchLimitRows(RFC4180CsvWriter writer, JSONArray rows, String[] colArray)
+      throws JSONException, IOException {
     int i;
     String nullString = null;
-   
+
     for (int k = 0; k < rows.size(); k++) {
       i = 0;
       JSONObject row = rows.getJSONObject(k);
-      colArray[i++] = row.getString(jsonId);
+      colArray[i++] = row.getString(ID_JSON);
       String formId = nullString;
-      if (!row.isNull(jsonFormId)) {
-        formId = row.getString(jsonFormId);
+      if (!row.isNull(FORM_ID_JSON)) {
+        formId = row.getString(FORM_ID_JSON);
       }
       colArray[i++] = formId;
-      colArray[i++] = row.getString(jsonLocale);
-      colArray[i++] = row.getString(jsonSavepointType);
-      colArray[i++] = row.getString(jsonSavepointTimestamp);
- 
+      colArray[i++] = row.getString(LOCALE_JSON);
+      colArray[i++] = row.getString(SAVEPOINT_TYPE_JSON);
+      colArray[i++] = row.getString(SAVEPOINT_TIMESTAMP_JSON);
+
       String creator = nullString;
-      if (!row.isNull(jsonSavepointCreator)) {
-        creator = row.getString(jsonSavepointCreator);
+      if (!row.isNull(SAVEPOINT_CREATOR_JSON)) {
+        creator = row.getString(SAVEPOINT_CREATOR_JSON);
       }
       colArray[i++] = creator;
- 
-      JSONArray rowsOrderedCols = row.getJSONArray(orderedColumnsDef);
- 
+
+      JSONArray rowsOrderedCols = row.getJSONArray(ORDERED_COLUMNS_DEF);
+
       for (int l = 0; l < rowsOrderedCols.size(); l++) {
         JSONObject col = rowsOrderedCols.getJSONObject(l);
         if (col.isNull("value")) {
@@ -2015,72 +2227,75 @@ public class WinkClient {
           colArray[i++] = col.getString("value");
         }
       }
- 
+
       colArray[i++] = nullString;
-      JSONObject filterScope = row.getJSONObject(jsonFilterScope);
-      colArray[i++] = filterScope.getString("type");
+      JSONObject filterScope = row.getJSONObject(FILTER_SCOPE_JSON);
+      colArray[i++] = filterScope.getString(TYPE_STR);
       if (filterScope.isNull("value")) {
         colArray[i++] = nullString;
       } else {
         colArray[i++] = filterScope.getString("value");
       }
- 
+
       writer.writeNext(colArray);
     }
   }
 
   /**
-   * Returns a JSONObject with the row data
-   * for the specified tableId, schemaETag, and
-   * rowId
+   * Returns a JSONObject with the row data for the specified tableId,
+   * schemaETag, and rowId
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param rowId the unique id for a row in the table
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param rowId
+   *          the unique id for a row in the table
    * @return a JSONObject that contains the row data
-   * @throws Exception any exception encountered is thrown to the caller
+   * @throws Exception
+   *           any exception encountered is thrown to the caller
    */
   public JSONObject getRow(String uri, String appId, String tableId, String schemaETag, String rowId)
-      throws Exception {
+      throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-      //RestClient restClient = new RestClient();
-  
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriRowsFragment + separator + rowId;
+
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT + SEPARATOR_STR + rowId;
       System.out.println("getRow: agg uri is " + agg_uri);
-      //Resource tableResource = restClient.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-  
-      //String tableRes = tableResource.accept("application/json").get(String.class);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String tableRes = strLine.toString();
-      
+
       obj = new JSONObject(tableRes);
       System.out.println("getRow: result for table " + tableId + " row " + rowId + " is "
           + obj.toString());
@@ -2093,22 +2308,16 @@ public class WinkClient {
     return obj;
   }
 
-
   /**
-   * Converts a given rowId to a String
-   * that has only alphanumeric characters
-   * and underscores.  This is useful for 
-   * creating a directory name in which to 
-   * store instance files or row level
-   * attachments.  
+   * Converts a given rowId to a String that has only alphanumeric characters
+   * and underscores. This is useful for creating a directory name in which to
+   * store instance files or row level attachments.
    * 
-   * @param rowId the unique identifier for the row
+   * @param rowId
+   *          the unique identifier for the row
    * @return a String with only alphanumeric characters and underscores
    */
   public static String convertRowIdForInstances(String rowId) {
-    // This is similar to ODKFileUtils.getInstanceFolder
-    // in AndroidCommon, but I didn't want to include android
-    // specific code.
     String rowIdToUse = null;
     if (rowId == null || rowId.length() == 0) {
       throw new IllegalArgumentException(
@@ -2120,62 +2329,67 @@ public class WinkClient {
   }
 
   /**
-   * Returns a JSONObject with the 
-   * attachments for a given row in a
-   * specified table
+   * Returns a JSONObject with the attachments for a given row in a specified
+   * table
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param rowId the unique identifier for a row in the table
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param rowId
+   *          the unique identifier for a row in the table
    * @return a JSONObject with the attachments for the row
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public JSONObject getManifestForRow(String uri, String appId, String tableId, String schemaETag,
-      String rowId) throws Exception {
+      String rowId) throws ClientProtocolException, IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     HttpGet request = null;
     try {
-    //RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriAttachmentsFragment + rowId + uriManifestFragment;
-    System.out.println("getManifestForRow: agg uri is " + agg_uri);
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + rowId + MANIFEST_URI_FRAGMENT;
+      System.out.println("getManifestForRow: agg uri is " + agg_uri);
 
-    //Resource resource = restClient.resource(agg_uri);
-    request = new HttpGet(agg_uri);
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
 
-    //String res = resource.accept("application/json").contentType("application/json").get(String.class);
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String res = strLine.toString();
-    
-    obj = new JSONObject(res);
-    
-    System.out.println("getManifestForRow: result for " + tableId + " with rowId " + rowId + " is "
-        + obj.toString());
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String res = strLine.toString();
+
+      obj = new JSONObject(res);
+
+      System.out.println("getManifestForRow: result for " + tableId + " with rowId " + rowId
+          + " is " + obj.toString());
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -2186,92 +2400,32 @@ public class WinkClient {
   }
 
   /**
-   * Returns a JSONObject representation
-   * for a Row object
+   * Creates rows in the table associated with the tableId and schemaETag using
+   * bulk upload
    * 
-   * @param row a Row object
-   * @return a JSONObject representation of row
-   * @throws Exception any exception encountered is thrown to the caller
-   */
-  public JSONObject mapRowToJSONObject(Row row) throws Exception {
-    JSONObject rowObj = new JSONObject();
-    JSONObject col;
-    JSONArray cols = new JSONArray();
-    JSONObject filterScope = new JSONObject();
-    String nullString = null;
-
-    String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
-
-    ArrayList<DataKeyValue> dkvl = row.getValues();
-    for (int i = 0; i < dkvl.size(); i++) {
-      DataKeyValue dkv = dkvl.get(i);
-      String key = dkv.column;
-      String val = dkv.value;
-      col = new JSONObject();
-      col.put("column", key);
-      col.put("value", val);
-      cols.add(col);
-    }
-
-    filterScope.put("type", "DEFAULT");
-    filterScope.put("value", nullString);
-
-    rowObj.put("rowETag", row.getRowETag());
-
-    rowObj.put("id", row.getRowId());
-    rowObj.put("deleted", "false");
-    rowObj.put("formId", row.getFormId());
-
-    String locale = row.getLocale();
-    if (locale == null || locale.isEmpty()) {
-      rowObj.put("locale", Locale.ENGLISH.getLanguage());
-    } else {
-      rowObj.put("locale", locale);
-    }
-
-    String savepointType = row.getSavepointType();
-    if (savepointType == null || savepointType.isEmpty()) {
-      rowObj.put("savepointType", SavepointTypeManipulator.complete());
-    } else {
-      rowObj.put("savepointType", savepointType);
-    }
-
-    String savepointTimestamp = row.getSavepointTimestamp();
-    if (savepointTimestamp == null || savepointTimestamp.isEmpty()) {
-      rowObj.put("savepointTimestamp", timeStamp);
-    } else {
-      rowObj.put("savepointTimestamp", savepointTimestamp);
-    }
-
-    rowObj.put("savepointCreator", row.getSavepointCreator());
-
-    rowObj.put("filterScope", filterScope);
-
-    rowObj.put("orderedColumns", cols);
-
-    return rowObj;
-  }
-
-  public void mapUserCSVToProprietaryCSV(String pathToUserCSV, String pathToCSV) {
-
-  }
-   
-  /**
-   * Creates rows in the table associated with
-   * the tableId and schemaETag using bulk upload
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param rowArrayList
+   *          an ArrayList of rows to create
+   * @param batchSize
+   *          used to set the batch size of rows sent to the server - if 0 is
+   *          passed in, the default of 500 is used
+   *          
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param rowArrayList an ArrayList of rows to create
-   * @param batchSize used to set the batch size of rows sent to the server - 
-   * if 0 is passed in, the default of 500 is used 
-   * @throws Exception any exception encountered is thrown to the caller
    */
-  public void createRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag,
-      ArrayList<Row> rowArrayList, int batchSize) throws Exception {
-      
+  public void createRowsUsingBulkUpload(String uri, String appId, String tableId,
+      String schemaETag, ArrayList<Row> rowArrayList, int batchSize)
+      throws ClientProtocolException, IOException, JSONException {
+
     // Default values for rows
     String rowId = null;
     String locale = Locale.ENGLISH.getLanguage();
@@ -2284,45 +2438,46 @@ public class WinkClient {
     if (batchSize == 0) {
       batchSize = 500;
     }
-    
+
     // No Row Id for bulk upload
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
 
     ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
     for (int i = 0; i < rowArrayList.size(); i++) {
       Row row = rowArrayList.get(i);
-      Row rowObj = Row.forInsert(row.getRowId(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
-          row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
-      
+      Row rowObj = Row.forInsert(row.getRowId(), row.getFormId(), row.getLocale(),
+          row.getSavepointType(), row.getSavepointTimestamp(), row.getSavepointCreator(),
+          row.getFilterScope(), row.getValues());
+
       // Ensure that adequate defaults are set for all rows
       if (rowObj.getRowId() == null || rowObj.getRowId().length() == 0) {
         rowId = "uuid:" + UUID.randomUUID().toString();
         rowObj.setRowId(rowId);
       }
-      
+
       if (rowObj.getLocale() == null || rowObj.getLocale().length() == 0) {
         rowObj.setLocale(locale);
       }
-      
+
       if (rowObj.getSavepointType() == null || rowObj.getSavepointType().length() == 0) {
         rowObj.setSavepointType(savepointType);
       }
-      
+
       if (rowObj.getSavepointTimestamp() == null || rowObj.getSavepointTimestamp().length() == 0) {
         savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
         rowObj.setSavepointTimestamp(savepointTimestamp);
       }
-      
+
       if (rowObj.getSavepointCreator() == null || rowObj.getSavepointCreator().length() == 0) {
         rowObj.setSavepointCreator(savepointCreator);
       }
-      
+
       if (rowObj.getFilterScope() == null) {
         rowObj.setFilterScope(defaultScope);
       }
-      
+
       processedRowArrayList.add(rowObj);
 
       if (processedRowArrayList.size() >= batchSize) {
@@ -2338,25 +2493,32 @@ public class WinkClient {
       bulkRowsSender(processedRowArrayList, agg_uri, tableId, dataETag, false);
     }
   }
-  
+
   /**
-   * Creates rows in the table associated with
-   * the tableId and schemaETag using a JSONArray
-   * of rows.  This function should be used
-   * when there are thousands of rows of data to
-   * upload. 
+   * Creates rows in the table associated with the tableId and schemaETag using
+   * a JSONArray of rows. This function should be used when there are thousands
+   * of rows of data to upload.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param jsonRows a JSONArray of rows to insert into the database
-   * @param batchSize the number of rows that will be uploaded to the server at one time
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param jsonRows
+   *          a JSONArray of rows to insert into the database
+   * @param batchSize
+   *          the number of rows that will be uploaded to the server at one time
+   *          
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
   public void createRowsUsingJSONBulkUpload(String uri, String appId, String tableId,
-      String schemaETag, String jsonRows, int batchSize) throws Exception {
-    
+      String schemaETag, String jsonRows, int batchSize) throws IOException, JSONException {
+
     // Default values for rows
     String rowId = "uuid:" + UUID.randomUUID().toString();
     String formId = null;
@@ -2372,12 +2534,12 @@ public class WinkClient {
     }
 
     JSONObject rowWrapperObj = new JSONObject(jsonRows);
-    JSONArray rowsObj = rowWrapperObj.getJSONArray(jsonRowsString);
+    JSONArray rowsObj = rowWrapperObj.getJSONArray(ROWS_STR_JSON);
     JSONObject rowObj = null;
-    
+
     // No Row Id for bulk upload
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
 
     ArrayList<Row> rowArrayList = new ArrayList<Row>();
 
@@ -2386,44 +2548,45 @@ public class WinkClient {
 
       ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
 
-      JSONArray orderedCols = rowObj.getJSONArray(orderedColumnsDef);
-      
+      JSONArray orderedCols = rowObj.getJSONArray(ORDERED_COLUMNS_DEF);
+
       for (int j = 0; j < orderedCols.size(); j++) {
         JSONObject col = orderedCols.getJSONObject(j);
         DataKeyValue dkv = new DataKeyValue(col.getString("column"), col.getString("value"));
         dkvl.add(dkv);
       }
-      
-      if (rowObj.containsKey(jsonId)) {
-        rowId = rowObj.getString(jsonId);
+
+      if (rowObj.containsKey(ID_JSON)) {
+        rowId = rowObj.getString(ID_JSON);
       }
-      
-      if (rowObj.containsKey(jsonFormId)) {
-        formId = rowObj.getString(jsonFormId);
+
+      if (rowObj.containsKey(FORM_ID_JSON)) {
+        formId = rowObj.getString(FORM_ID_JSON);
       }
-      
-      if (rowObj.containsKey(jsonLocale)) {
-        locale = rowObj.getString(jsonLocale);
+
+      if (rowObj.containsKey(LOCALE_JSON)) {
+        locale = rowObj.getString(LOCALE_JSON);
       }
-      
-      if (rowObj.containsKey(jsonSavepointType)) {
-        savepointType = rowObj.getString(jsonSavepointType);
+
+      if (rowObj.containsKey(SAVEPOINT_TYPE_JSON)) {
+        savepointType = rowObj.getString(SAVEPOINT_TYPE_JSON);
       }
-      
-      if (rowObj.containsKey(jsonSavepointTimestamp)) {
-        savepointTimestamp = rowObj.getString(jsonSavepointTimestamp);
+
+      if (rowObj.containsKey(SAVEPOINT_TIMESTAMP_JSON)) {
+        savepointTimestamp = rowObj.getString(SAVEPOINT_TIMESTAMP_JSON);
       }
-      
-      if (rowObj.containsKey(jsonSavepointCreator)) {
-        savepointCreator = rowObj.getString(jsonSavepointCreator);
+
+      if (rowObj.containsKey(SAVEPOINT_CREATOR_JSON)) {
+        savepointCreator = rowObj.getString(SAVEPOINT_CREATOR_JSON);
       }
-      
-      if (rowObj.containsKey(jsonFilterScope)) {
-        JSONObject filterObj = rowObj.getJSONObject(jsonFilterScope);
-        defaultScope = Scope.asScope(filterObj.getString("type"), filterObj.getString("value"));
+
+      if (rowObj.containsKey(FILTER_SCOPE_JSON)) {
+        JSONObject filterObj = rowObj.getJSONObject(FILTER_SCOPE_JSON);
+        defaultScope = Scope.asScope(filterObj.getString(TYPE_STR), filterObj.getString("value"));
       }
-      
-      Row row = Row.forInsert(rowId, formId, locale, savepointType, savepointTimestamp, savepointCreator, defaultScope, dkvl);
+
+      Row row = Row.forInsert(rowId, formId, locale, savepointType, savepointTimestamp,
+          savepointCreator, defaultScope, dkvl);
 
       rowArrayList.add(row);
 
@@ -2440,63 +2603,81 @@ public class WinkClient {
       bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
     }
   }
-   
+
   /**
-   * Creates rows in the table associated with
-   * the tableId and schemaETag using a CSV file 
-   * in batches.  This function should be used
-   * when there are thousands of rows of data to
-   * upload. 
+   * Creates rows in the table associated with the tableId and schemaETag using
+   * a CSV file in batches. This function should be used when there are
+   * thousands of rows of data to upload.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvFilePath the file path from which to retrieve the row data
-   * @param batchSize the number of rows that will be uploaded to the server at one time
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvFilePath
+   *          the file path from which to retrieve the row data
+   * @param batchSize
+   *          the number of rows that will be uploaded to the server at one time
+   *          
+   * @throws FileNotFoundException
+   * @throws IOException
+   * @throws DataFormatException
+   * 
    */
   public void createRowsUsingCSVBulkUpload(String uri, String appId, String tableId,
-      String schemaETag, String csvFilePath, int batchSize) throws Exception {
+      String schemaETag, String csvFilePath, int batchSize) throws FileNotFoundException,
+      IOException, DataFormatException {
     RFC4180CsvReader reader;
-    
+
     File file = new File(csvFilePath);
     if (!file.exists()) {
       System.out.println("createRowsUsingCSVBulkUpload: file " + csvFilePath + " does not exist");
     }
 
     InputStream in = new FileInputStream(file);
-    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName(UTF8_STR));
     reader = new RFC4180CsvReader(inputStream);
 
     createRowsUsingCSVBulkUploadProcessing(uri, appId, tableId, schemaETag, batchSize, reader);
   }
-  
+
   /**
-   * Creates rows in the table associated with
-   * the tableId and schemaETag using an input stream 
-   * in batches.  This function should be used
-   * when there are thousands of rows of data to
-   * upload. 
+   * Creates rows in the table associated with the tableId and schemaETag using
+   * an input stream in batches. This function should be used when there are
+   * thousands of rows of data to upload.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param csvInputStream the input stream from which to retrieve the row data
-   * @param batchSize the number of rows that will be uploaded to the server at one time
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param csvInputStream
+   *          the input stream from which to retrieve the row data
+   * @param batchSize
+   *          the number of rows that will be uploaded to the server at one time
+   *          
+   * @throws IOException 
+   * @throws DataFormatException
+   * 
    */
   public void createRowsUsingCSVInputStreamBulkUpload(String uri, String appId, String tableId,
-      String schemaETag, InputStream csvInputStream, int batchSize) throws Exception {
+      String schemaETag, InputStream csvInputStream, int batchSize) throws IOException,
+      DataFormatException {
     RFC4180CsvReader reader;
-    
+
     if (csvInputStream.available() <= 0) {
-      throw new IllegalArgumentException("createTableWithCSVInputStream: csvInputStream is not available");
+      throw new IllegalArgumentException(
+          "createTableWithCSVInputStream: csvInputStream is not available");
     }
-    
+
     InputStream in = csvInputStream;
-    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName("UTF-8"));
+    InputStreamReader inputStream = new InputStreamReader(in, Charset.forName(UTF8_STR));
     reader = new RFC4180CsvReader(inputStream);
 
     createRowsUsingCSVBulkUploadProcessing(uri, appId, tableId, schemaETag, batchSize, reader);
@@ -2506,16 +2687,16 @@ public class WinkClient {
       String schemaETag, int batchSize, RFC4180CsvReader reader) throws IOException,
       DataFormatException, JsonProcessingException, UnsupportedEncodingException,
       ClientProtocolException {
-    
+
     String dataETag = null;
-    
+
     if (batchSize == 0) {
       batchSize = 500;
     }
 
     // No Row Id for bulk upload
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
 
     // Make sure that the first line of the csv file
     // has the right header
@@ -2524,19 +2705,19 @@ public class WinkClient {
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[0].equals(rowDefId) || !firstLine[1].equals(rowDefFormId)
-        || !firstLine[2].equals(rowDefLocale) || !firstLine[3].equals(rowDefSavepointType)
-        || !firstLine[4].equals(rowDefSavepointTimestamp)
-        || !firstLine[5].equals(rowDefSavepointCreator)) {
+    if (!firstLine[0].equals(ID_ROW_DEF) || !firstLine[1].equals(FORM_ID_ROW_DEF)
+        || !firstLine[2].equals(LOCALE_ROW_DEF) || !firstLine[3].equals(SAVEPOINT_TYPE_ROW_DEF)
+        || !firstLine[4].equals(SAVEPOINT_TIMESTAMP_ROW_DEF)
+        || !firstLine[5].equals(SAVEPOINT_CREATOR_ROW_DEF)) {
       throw new DataFormatException(
           "The csv file used to create rows does not have the correct columns in the first row");
     }
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[numOfCols - 3].equals(rowDefRowETag)
-        || !firstLine[numOfCols - 2].equals(rowDefFilterType)
-        || !firstLine[numOfCols - 1].equals(rowDefFilterValue)) {
+    if (!firstLine[numOfCols - 3].equals(ROW_ETAG_ROW_DEF)
+        || !firstLine[numOfCols - 2].equals(FILTER_TYPE_ROW_DEF)
+        || !firstLine[numOfCols - 1].equals(FILTER_VALUE_ROW_DEF)) {
       throw new DataFormatException(
           "The csv file used to create rows does not have the correct columns in the first row");
     }
@@ -2546,32 +2727,32 @@ public class WinkClient {
       ArrayList<Row> rowArrayList = new ArrayList<Row>();
       line = reader.readNext();
       while (line != null) {
-  
+
         if (line.length == 0) {
           line = reader.readNext();
           continue;
         }
-  
+
         ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
-  
+
         for (int i = 6; i < numOfCols - 3; i++) {
           DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]);
           dkvl.add(dkv);
         }
-  
+
         Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
-  
+
         rowArrayList.add(row);
-  
+
         if (rowArrayList.size() >= batchSize) {
           dataETag = getTableDataETag(uri, appId, tableId);
           bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
-  
+
           rowArrayList = new ArrayList<Row>();
         }
         line = reader.readNext();
       }
-  
+
       if (rowArrayList.size() > 0) {
         dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
@@ -2580,119 +2761,126 @@ public class WinkClient {
       e.printStackTrace();
     }
   }
-  
-  private RowOutcomeList bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri, String tableId, String dataETag, 
-      boolean print) throws JsonProcessingException, UnsupportedEncodingException, IOException,
-      ClientProtocolException, JSONException {
+
+  private RowOutcomeList bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri,
+      String tableId, String dataETag, boolean print) throws JsonProcessingException,
+      UnsupportedEncodingException, IOException, ClientProtocolException, JSONException {
     RowOutcomeList outcome = null;
- 
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
     if (print) {
-      System.out.println("Entering send"); 
+      System.out.println("Entering send");
     }
 
     HttpPut request = null;
     try {
       RowList rowList = new RowList();
       rowList.setRows(rowArrayList);
-      
+
       if (dataETag != null && !dataETag.isEmpty()) {
-        rowList.setDataETag(dataETag);      
+        rowList.setDataETag(dataETag);
       }
-      
+
       ObjectMapper mapper = new ObjectMapper();
       String rowRes = mapper.writeValueAsString(rowList);
-      
+
       System.out.println("agg_uri is " + agg_uri);
       System.out.println("Params for request: " + rowRes);
-      
-      //RestClient restClient = new RestClient();
-  
-      //Resource resource = restClient.resource(agg_uri);
+
       request = new HttpPut(agg_uri);
-      StringEntity params = new StringEntity(rowRes, "UTF-8");
+      StringEntity params = new StringEntity(rowRes, UTF8_STR);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
       request.setEntity(params);
-      
-      //String res = resource.accept("application/json").contentType("application/json")
-      //    .put(String.class, rowRes);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String res = strLine.toString();
-      
+
       if (print) {
-        System.out.println("bulkRowsSender: result with tableId " + tableId + " is "
-            + res);
-        
+        System.out.println("bulkRowsSender: result with tableId " + tableId + " is " + res);
+
         System.out.println("Exiting send");
       }
-      
+
       outcome = mapper.readValue(res, RowOutcomeList.class);
     } finally {
       if (request != null) {
         request.releaseConnection();
       }
     }
-    
+
     return outcome;
   }
-  
+
   /**
-   * Update row(s) in the table associated with
-   * the tableId and schemaETag using bulk upload
+   * Update row(s) in the table associated with the tableId and schemaETag using
+   * bulk upload
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param dataETagVal identifies the last change of the table
-   * @param rowArrayList an ArrayList of rows to create
-   * @param batchSize used to set the batch size of rows sent to the server - 
-   * if 0 is passed in, the default of 500 is used 
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dataETagVal
+   *          identifies the last change of the table
+   * @param rowArrayList
+   *          an ArrayList of rows to create
+   * @param batchSize
+   *          used to set the batch size of rows sent to the server - if 0 is
+   *          passed in, the default of 500 is used
+   *          
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public void updateRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
-      ArrayList<Row> rowArrayList, int batchSize) throws Exception{
+  public void updateRowsUsingBulkUpload(String uri, String appId, String tableId,
+      String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize)
+      throws ClientProtocolException, IOException, JSONException {
     String dataETag = getTableDataETag(uri, appId, tableId);
 
     // Check that the dataETag is valid before beginning
     if (!dataETag.equals(dataETagVal)) {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
-    
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
     System.out.println("updateRowsUsingBulkUpload: agg_uri is " + agg_uri);
-    
+
     if (batchSize == 0) {
       batchSize = 500;
     }
-    
+
     try {
       ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
       for (int i = 0; i < rowArrayList.size(); i++) {
         Row row = rowArrayList.get(i);
-        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
-            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
-        
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
+            row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
+            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+
         processedRowArrayList.add(rowObj);
 
         if (processedRowArrayList.size() >= batchSize) {
@@ -2707,54 +2895,67 @@ public class WinkClient {
         dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
-    
+
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
-  
+
   /**
-   * Deletes row(s) in the table associated with
-   * the tableId and schemaETag using bulk upload
+   * Deletes row(s) in the table associated with the tableId and schemaETag
+   * using bulk upload
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param dataETagVal identifies the last change of the table
-   * @param rowArrayList an ArrayList of rows to create
-   * @param batchSize used to set the batch size of rows sent to the server - 
-   * if 0 is passed in, the default of 500 is used 
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dataETagVal
+   *          identifies the last change of the table
+   * @param rowArrayList
+   *          an ArrayList of rows to create
+   * @param batchSize
+   *          used to set the batch size of rows sent to the server - if 0 is
+   *          passed in, the default of 500 is used
+   *          
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
-      ArrayList<Row> rowArrayList, int batchSize) throws Exception{
+  public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId,
+      String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize)
+      throws ClientProtocolException, IOException, JSONException {
     String dataETag = getTableDataETag(uri, appId, tableId);
 
     // Check that the dataETag is valid before beginning
     if (!dataETag.equals(dataETagVal)) {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
-    
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
     System.out.println("deleteRowsUsingBulkUpload: agg_uri is " + agg_uri);
-    
+
     if (batchSize == 0) {
       batchSize = 500;
     }
-    
+
     try {
       ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
       for (int i = 0; i < rowArrayList.size(); i++) {
         Row row = rowArrayList.get(i);
-        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
-            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
-        
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
+            row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
+            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+
         // Make sure that all of these rows are marked for deletion
         rowObj.setDeleted(true);
-        
+
         processedRowArrayList.add(rowObj);
 
         if (processedRowArrayList.size() >= batchSize) {
@@ -2769,93 +2970,112 @@ public class WinkClient {
         dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
-    
+
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
-  
+
   /**
-   * Alters row(s) in the table associated with
-   * the tableId and schemaETag for one batch - the size 
-   * of the batch should not exceed 500.
+   * Alters row(s) in the table associated with the tableId and schemaETag for
+   * one batch - the size of the batch should not exceed 500.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param dataETagVal identifies the last change of the table
-   * @param rowArrayList an ArrayList of rows to create
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dataETagVal
+   *          identifies the last change of the table
+   * @param rowArrayList
+   *          an ArrayList of rows to create
    * @return a RowOutcomeList with the row outcome and row data if applicable
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public RowOutcomeList alterRowsUsingSingleBatch(String uri, String appId, String tableId, String schemaETag, String dataETagVal, 
-      ArrayList<Row> rowArrayList) throws Exception{
+  public RowOutcomeList alterRowsUsingSingleBatch(String uri, String appId, String tableId,
+      String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList)
+      throws ClientProtocolException, IOException, JSONException {
     RowOutcomeList outcome = new RowOutcomeList();
-    
+
     String dataETag = getTableDataETag(uri, appId, tableId);
 
     // Check that the dataETag is valid before beginning
     if (dataETag == null && dataETagVal != null) {
       throw new IllegalArgumentException("The dataETag should be null");
     }
-    
+
     if (dataETag != null && !dataETag.equals(dataETagVal)) {
       throw new IllegalArgumentException("The dataETag supplied is not correct");
     }
-    
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriRowsFragment;
+
+    String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+        + REF_URI_FRAGMENT + schemaETag + ROWS_URI_FRAGMENT;
     System.out.println("alterRowsUsingSingleBatch: agg_uri is " + agg_uri);
-    
+
     try {
       ArrayList<Row> processedRowArrayList = new ArrayList<Row>();
 
       for (int i = 0; i < rowArrayList.size(); i++) {
         Row row = rowArrayList.get(i);
-        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(), row.getLocale(), row.getSavepointType(), 
-            row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
-        
+        Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
+            row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
+            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+
         processedRowArrayList.add(rowObj);
       }
 
       if (processedRowArrayList.size() > 0) {
         outcome = bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
-    
+
     } catch (Exception e) {
       e.printStackTrace();
     }
-    
+
     return outcome;
   }
 
   /**
-   * Get the file attachment and save it to 
-   * the specified file for a given row of a
-   * table.   
+   * Get the file attachment and save it to the specified file for a given row
+   * of a table.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param userRowId the unique identifier for a row
-   * @param asAttachment false to save the data as a file, true to download the data 
-   * @param pathToSaveFile file path in which to save the attachment
-   * @param relativePathOnServer the path on the server where the attachment resides
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param userRowId
+   *          the unique identifier for a row
+   * @param asAttachment
+   *          false to save the data as a file, true to download the data
+   * @param pathToSaveFile
+   *          file path in which to save the attachment
+   * @param relativePathOnServer
+   *          the path on the server where the attachment resides
+   * @throws IOException
+   *           exception encountered is thrown to the caller
    * 
    */
   public void getFileForRow(String uri, String appId, String tableId, String schemaETag,
       String userRowId, boolean asAttachment, String pathToSaveFile, String relativePathOnServer)
-      throws Exception {
-	// There can be multiple files per row
-	// Relative path is valid for rows
-    
+      throws IOException {
+    // There can be multiple files per row
+    // Relative path is valid for rows
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-	  
+
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("getFileForRow: uri cannot be null");
     }
@@ -2870,37 +3090,31 @@ public class WinkClient {
 
     HttpGet request = null;
     try {
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + FILE_URI_FRAGMENT
           + relativePathOnServer;
-  
+
       if (asAttachment) {
-        agg_uri = agg_uri + uriAsAttachmentFragment;
+        agg_uri = agg_uri + AS_ATTACHMENT_URI_FRAGMENT;
       }
-  
+
       System.out.println("getFileForRow: agg_uri is " + agg_uri);
-  
+
       File file = new File(pathToSaveFile);
       file.getParentFile().mkdirs();
       if (!file.exists()) {
         file.createNewFile();
       }
-  
-      // create the rest client instance
-      //RestClient client = new RestClient();
-  
-      // create the resource instance to interact with
-      //Resource resource = client.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       System.out.println("getFileForRow: agg_uri is " + agg_uri);
-  
+
       String accept = determineContentType(file.getName());
       request.addHeader("content-type", accept + "; charset=utf-8");
       request.addHeader("accept", accept);
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
-      //InputStream fis = resource.accept(accept).get(InputStream.class);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
@@ -2908,16 +3122,16 @@ public class WinkClient {
         response = httpClient.execute(request);
       }
       System.out.println("getFileForRow: issued get request for " + relativePathOnServer);
-      
+
       InputStream fis = response.getEntity().getContent();
-  
+
       FileOutputStream fos = new FileOutputStream(file.getAbsoluteFile());
       byte[] buffer = new byte[1024];
       int len;
       while ((len = fis.read(buffer)) > 0) {
         fos.write(buffer, 0, len);
       }
-  
+
       fos.close();
       fis.close();
     } finally {
@@ -2926,66 +3140,75 @@ public class WinkClient {
       }
     }
   }
-  
+
   /**
-   * Get a batch of file attachments and save them to 
-   * specified files for a given row of a
-   * table.   
+   * Get a batch of file attachments and save them to specified files for a
+   * given row of a table.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param userRowId the unique identifier for a row
-   * @param dirToSaveFiles file path in which to save the attachments
-   * @param filesToGet JSONObject of files - same structure as returned in getManifestForRow
-   * @param batchSizeInBytes the number of bytes to transfer in a batch default is 10MB
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param userRowId
+   *          the unique identifier for a row
+   * @param dirToSaveFiles
+   *          file path in which to save the attachments
+   * @param filesToGet
+   *          JSONObject of files - same structure as returned in
+   *          getManifestForRow
+   * @param batchSizeInBytes
+   *          the number of bytes to transfer in a batch default is 10MB
+   * @throws JSONException
+   *           exception encountered is thrown to the caller
    * 
    */
   public void batchGetFilesForRow(String uri, String appId, String tableId, String schemaETag,
-	      String userRowId, String dirToSaveFiles, JSONObject filesToGet, int batchSizeInBytes)
-	      throws Exception {
+      String userRowId, String dirToSaveFiles, JSONObject filesToGet, int batchSizeInBytes)
+      throws JSONException {
 
-    int batchSizeToUse = MAX_BATCH_SIZE;  
-	  
-	if (httpClient == null) {
-	  throw new IllegalStateException("The initialization function must be called");
-	}
-	  	  
-	if (uri == null || uri.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: uri cannot be null");
-	}
-	      
-	if (appId == null || appId.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: appId cannot be null");
-	}
-	      
-	if (tableId == null || tableId.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: tableId cannot be null");
-	}
-	      
-	if (schemaETag == null || schemaETag.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: schemaETag cannot be null");
-	}
-	      
-	if (userRowId == null || userRowId.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: userRowId cannot be null");
-	}
+    int batchSizeToUse = MAX_BATCH_SIZE;
 
-	if (dirToSaveFiles == null || dirToSaveFiles.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: dirToSaveFiles cannot be null");
-	}
-	      
-	if (filesToGet == null || filesToGet.isEmpty()) {
-	  throw new IllegalArgumentException("batchGetFilesForRow: filesToGet cannot be null");
-	}
-	    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    if (uri == null || uri.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: uri cannot be null");
+    }
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: appId cannot be null");
+    }
+
+    if (tableId == null || tableId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: tableId cannot be null");
+    }
+
+    if (schemaETag == null || schemaETag.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: schemaETag cannot be null");
+    }
+
+    if (userRowId == null || userRowId.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: userRowId cannot be null");
+    }
+
+    if (dirToSaveFiles == null || dirToSaveFiles.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: dirToSaveFiles cannot be null");
+    }
+
+    if (filesToGet == null || filesToGet.isEmpty()) {
+      throw new IllegalArgumentException("batchGetFilesForRow: filesToGet cannot be null");
+    }
+
     if (batchSizeInBytes > 0 && batchSizeInBytes < MAX_BATCH_SIZE) {
-	  batchSizeToUse = batchSizeInBytes;	
-	}
-    
-    JSONArray totalFiles = filesToGet.getJSONArray("files");
+      batchSizeToUse = batchSizeInBytes;
+    }
+
+    JSONArray totalFiles = filesToGet.getJSONArray(FILES_STR);
 
     JSONArray batchFilesArray = new JSONArray();
 
@@ -2994,63 +3217,67 @@ public class WinkClient {
       JSONObject file = totalFiles.getJSONObject(i);
       batchSize += file.getInt("contentLength");
       batchFilesArray.add(file);
-      
+
       if (batchSize >= batchSizeToUse) {
-    	JSONObject batchFiles = new JSONObject();
-    	batchFiles.put("files", batchFilesArray);
-        downloadBatchForRow(uri, appId, tableId, schemaETag,
-          userRowId, dirToSaveFiles, batchFiles); 
+        JSONObject batchFiles = new JSONObject();
+        batchFiles.put(FILES_STR, batchFilesArray);
+        downloadBatchForRow(uri, appId, tableId, schemaETag, userRowId, dirToSaveFiles, batchFiles);
         batchSize = 0;
         batchFilesArray.clear();
       }
     }
-    
+
     if (batchSize > 0) {
       JSONObject batchFiles = new JSONObject();
-      batchFiles.put("files", batchFilesArray);
-      downloadBatchForRow(uri, appId, tableId, schemaETag,userRowId, dirToSaveFiles, batchFiles); 	
-    } 
+      batchFiles.put(FILES_STR, batchFilesArray);
+      downloadBatchForRow(uri, appId, tableId, schemaETag, userRowId, dirToSaveFiles, batchFiles);
+    }
   }
-  
+
   /**
-   * Get a batch of file attachments and save them to 
-   * specified files for a given row of a
-   * table.   
+   * Get a batch of file attachments and save them to specified files for a
+   * given row of a table.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param userRowId the unique identifier for a row
-   * @param dirToSaveFiles file path in which to save the attachments
-   * @param filesToGet JSONObject of files - same structure as returned in getManifestForRow
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param userRowId
+   *          the unique identifier for a row
+   * @param dirToSaveFiles
+   *          file path in which to save the attachments
+   * @param filesToGet
+   *          JSONObject of files - same structure as returned in
+   *          getManifestForRow
    * 
    */
   public void downloadBatchForRow(String uri, String appId, String tableId, String schemaETag,
-      String userRowId, String dirToSaveFiles, JSONObject filesToGet)
-      throws Exception {
-    
+      String userRowId, String dirToSaveFiles, JSONObject filesToGet) {
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
-	  
+
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: uri cannot be null");
     }
-    
+
     if (appId == null || appId.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: appId cannot be null");
     }
-    
+
     if (tableId == null || tableId.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: tableId cannot be null");
     }
-    
+
     if (schemaETag == null || schemaETag.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: schemaETag cannot be null");
     }
-    
+
     if (userRowId == null || userRowId.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: userRowId cannot be null");
     }
@@ -3058,105 +3285,104 @@ public class WinkClient {
     if (dirToSaveFiles == null || dirToSaveFiles.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: dirToSaveFiles cannot be null");
     }
-    
+
     if (filesToGet == null || filesToGet.isEmpty()) {
       throw new IllegalArgumentException("batchGetFilesForRow: filesToGet cannot be null");
     }
 
     HttpPost request = null;
     try {
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + downloadFragment;
-  
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + DOWNLOAD_FRAGMENT;
+
       System.out.println("batchGetFilesForRow: agg_uri is " + agg_uri);
-  
-      // create the rest client instance
-      //RestClient client = new RestClient();
-  
-      // create the resource instance to interact with
-      //Resource resource = client.resource(agg_uri);
+
       request = new HttpPost(agg_uri);
-  
+
       // Takes json by default - just put a dummy file here for now
       String accept = determineContentType("test.json");
-      
+
       // TBD: Make constants for this!!
       request.addHeader("content-type", accept + "; charset=utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      
-      StringEntity params = new StringEntity(filesToGet.toString(), "UTF-8");
+
+      StringEntity params = new StringEntity(filesToGet.toString(), UTF8_STR);
       request.setEntity(params);
-      
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
-      System.out.println("batchGetFilesForRow: client response is " + response.getStatusLine().getStatusCode() + ":" +
-              response.getStatusLine().getReasonPhrase());
-      
-      if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() >= 300) {
+
+      System.out.println("batchGetFilesForRow: client response is "
+          + response.getStatusLine().getStatusCode() + ":"
+          + response.getStatusLine().getReasonPhrase());
+
+      if (response.getStatusLine().getStatusCode() < 200
+          || response.getStatusLine().getStatusCode() >= 300) {
         return;
       }
-      
+
       String boundaryVal = null;
       Header hdr = response.getEntity().getContentType();
       HeaderElement[] hdrElem = hdr.getElements();
       for (HeaderElement elm : hdrElem) {
-    	int cnt = elm.getParameterCount();
-    	for (int i = 0; i < cnt; i++) {
-    	  NameValuePair nvp = elm.getParameter(i);
-    	  String nvp_name = nvp.getName();
+        int cnt = elm.getParameterCount();
+        for (int i = 0; i < cnt; i++) {
+          NameValuePair nvp = elm.getParameter(i);
+          String nvp_name = nvp.getName();
           String nvp_value = nvp.getValue();
-    	  if (nvp_name.equals(BOUNDARY)) {
+          if (nvp_name.equals(BOUNDARY)) {
             boundaryVal = nvp_value;
             break;
-    	  }
-    	}
+          }
+        }
       }
-      
+
       // Best to return at this point if we can't
       // determine the boundary to parse the multi-part form
       if (boundaryVal == null) {
-        return;	  
+        return;
       }
-      
+
       InputStream inStream = response.getEntity().getContent();
-      
-      byte[] msParam = boundaryVal.getBytes(Charset.forName("UTF-8"));
-      MultipartStream multipartStream = new MultipartStream(inStream, msParam, DEFAULT_BOUNDARY_BUFSIZE, null);
+
+      byte[] msParam = boundaryVal.getBytes(Charset.forName(UTF8_STR));
+      MultipartStream multipartStream = new MultipartStream(inStream, msParam,
+          DEFAULT_BOUNDARY_BUFSIZE, null);
 
       OutputStream os = null;
-      
+
       // Parse the request
       boolean nextPart = multipartStream.skipPreamble();
       while (nextPart) {
         String header = multipartStream.readHeaders();
         System.out.println("Headers: " + header);
-        
-        // Get the file name 
-        int firstIndex = header.indexOf(multipartFileHeader) + multipartFileHeader.length();
+
+        // Get the file name
+        int firstIndex = header.indexOf(MULTIPART_FILE_HEADER) + MULTIPART_FILE_HEADER.length();
         int lastIndex = header.lastIndexOf("\"");
         String instFileName = header.substring(firstIndex, lastIndex);
-        
+
         File instFile = new File(dirToSaveFiles + File.separator + instFileName);
         instFile.getParentFile().mkdirs();
         if (!instFile.exists()) {
           instFile.createNewFile();
         }
-        
+
         try {
           os = new BufferedOutputStream(new FileOutputStream(instFile));
-        	
+
           multipartStream.readBodyData(os);
           os.flush();
           os.close();
           os = null;
         } catch (IOException e) {
           e.printStackTrace();
-          System.out.println("batchGetFilesForRow: Download file batches: Unable to read attachment");
+          System.out
+              .println("batchGetFilesForRow: Download file batches: Unable to read attachment");
           return;
         } finally {
           if (os != null) {
@@ -3164,7 +3390,8 @@ public class WinkClient {
               os.close();
             } catch (IOException e) {
               e.printStackTrace();
-              System.out.println("batchGetFilesForRow: Download file batches: Error closing output stream");
+              System.out
+                  .println("batchGetFilesForRow: Download file batches: Error closing output stream");
             }
           }
         }
@@ -3172,7 +3399,7 @@ public class WinkClient {
       }
     } catch (Exception e) {
       e.printStackTrace();
-    }finally {
+    } finally {
       if (request != null) {
         request.releaseConnection();
       }
@@ -3180,21 +3407,28 @@ public class WinkClient {
   }
 
   /**
-   * Upload the file attachment for a given row of a
-   * table.  
+   * Upload the file attachment for a given row of a table.
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param userRowId the unique identifier for a row
-   * @param wholePathToFile file path of the file to upload
-   * @param relativePathOnServer the path on the server for the attachment 
-   * @throws Exception any exception encountered is thrown to the caller
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param userRowId
+   *          the unique identifier for a row
+   * @param wholePathToFile
+   *          file path of the file to upload
+   * @param relativePathOnServer
+   *          the path on the server for the attachment
+   * @throws IOException
+   *           exception encountered is thrown to the caller
    * @return Http response status code
    */
   public int putFileForRow(String uri, String appId, String tableId, String schemaETag,
-      String userRowId, String wholePathToFile, String relativePathOnServer) throws Exception {
+      String userRowId, String wholePathToFile, String relativePathOnServer) throws IOException {
     if (uri == null || uri.isEmpty()) {
       throw new IllegalArgumentException("putFileForRow: uri cannot be null");
     }
@@ -3209,54 +3443,45 @@ public class WinkClient {
 
     HttpPost request = null;
     try {
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriAttachmentsFragment + userRowId + uriFileFragment
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + ATTACHMENTS_URI_FRAGMENT + userRowId + FILE_URI_FRAGMENT
           + relativePathOnServer;
       System.out.println("putFileForRow: agg_uri is " + agg_uri);
-  
+
       File file = new File(wholePathToFile);
       if (!file.exists()) {
         System.out.println("putFileForRow: file " + wholePathToFile + " does not exist");
         throw new IllegalArgumentException("putFileForRow: wholePathToFile cannot be null");
       }
-  
-      //InputStream in = new FileInputStream(file);
+
       byte[] data = Files.readAllBytes(file.toPath());
-  
-      // create the rest client instance
-      //RestClient client = new RestClient();
-  
-      // create the resource instance to interact with
-      //Resource resource = client.resource(agg_uri);
+
       request = new HttpPost(agg_uri);
-      
+
       // issue the request
       String contentType = this.determineContentType(file.getName());
-      //InputStream response = resource.contentType(contentType).accept(contentType)
-      //    .post(InputStream.class, in);
+
       request.addHeader("content-type", contentType + "; charset=utf-8");
       request.addHeader("accept", contentType);
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
       System.out.println("putFileForRow: response for file " + wholePathToFile + " is ");
-      
+
       HttpEntity entity = new ByteArrayEntity(data);
       request.setEntity(entity);
-      
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-  
-      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
-          Charset.forName("UTF-8")));
+
+      BufferedReader responseBuff = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
       String line;
       while ((line = responseBuff.readLine()) != null)
         System.out.println(line);
-      
-      //in.close();
 
       return response.getStatusLine().getStatusCode();
     } finally {
@@ -3265,178 +3490,201 @@ public class WinkClient {
       }
     }
   }
-  
+
   /**
-   * Returns a JSONObject of the rows that can 
-   * be found in a table specified tableId and 
-   * schemaETag in the range of a specified
-   * startTime and endTime using lastUpdateDate
+   * Returns a JSONObject of the rows that can be found in a table specified
+   * tableId and schemaETag in the range of a specified startTime and endTime
+   * using lastUpdateDate
    * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param startTime a required timestamp used to get all rows with a time greater than or equal to it.  
-   * The format of startTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
-   * @param endTime an optional timestamp used to get all rows with a time less than or equal to it.  
-   * The format for endTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
-   * @param cursor query parameter that identifies the point at which to 
-   * resume the query
-   * @param fetchLimit query parameter that defines the number of rows to 
-   * return
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param startTime
+   *          a required timestamp used to get all rows with a time greater than
+   *          or equal to it. The format of startTime is
+   *          yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param endTime
+   *          an optional timestamp used to get all rows with a time less than
+   *          or equal to it. The format for endTime is
+   *          yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
    * @return a JSONObject with the row data
-   * @throws Exception any exception encountered is thrown to the caller
+   * 
+   * @throws IOException
+   * @throws JSONException
+   * 
    */
-  public JSONObject queryRowsInTimeRangeWithLastUpdateDate(String uri, String appId, String tableId, String schemaETag,
-      String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
+  public JSONObject queryRowsInTimeRangeWithLastUpdateDate(String uri, String appId,
+      String tableId, String schemaETag, String startTime, String endTime, String cursor,
+      String fetchLimit) throws IOException, JSONException {
     JSONObject obj = null;
-    
+
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
     }
 
     if (startTime == null || startTime.isEmpty()) {
-      throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
+      throw new IllegalArgumentException(
+          "startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
     }
-    
+
     HttpGet request = null;
     try {
-    //RestClient restClient = new RestClient();
+      // RestClient restClient = new RestClient();
 
-    String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-        + uriRefFragment + schemaETag + uriQueryFragment + uriLastUpdateDateFragment;
-    
-    agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
-    
-    if (endTime != null && !endTime.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
-    }
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + QUERY_URI_FRAGMENT + LAST_UPDATE_DATE_URI_FRAGMENT;
 
-    if (cursor != null && !cursor.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamCursor + cursor;
-    }
+      agg_uri = agg_uri + "?" + START_TIME_QUERY_PARAM + startTime;
 
-    if (fetchLimit != null && !fetchLimit.isEmpty()) {
-      agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
-    }
-
-    //Resource tableResource = restClient.resource(agg_uri);
-    request = new HttpGet(agg_uri);
-    request.addHeader("content-type", "application/json; charset=utf-8");
-    request.addHeader("accept", "application/json");
-    request.addHeader("accept-charset", "utf-8");
-    request.addHeader("X-OpenDataKit-Version", "2.0");
-    System.out.println("queryRowsInTimeRangeWithLastUpdateDate: agg uri is " + agg_uri);
-
-    //String tableRes = tableResource.accept("application/json").get(String.class);
-    HttpResponse response = null;
-    if (localContext != null) {
-      response = httpClient.execute(request, localContext);
-    } else {
-      response = httpClient.execute(request);
-    }
-    
-    BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-        .getContent(), Charset.forName("UTF-8")));
-    StringBuilder strLine = new StringBuilder();
-    String resLine;
-    while ((resLine = rd.readLine()) != null) {
-      strLine.append(resLine);
-    }
-    String tableRes = strLine.toString();
-    
-    obj = new JSONObject(tableRes);
-    System.out.println("queryRowsInTimeRangeWithLastUpdateDate: result for " + tableId + " is " + obj.toString());
-    } finally {
-      if (request != null) {
-        request.releaseConnection();
-      }
-    }
-    
-    return obj;
-  }
-    
-  /**
-   * Returns a JSONObject of the rows that can 
-   * be found in a table specified tableId and 
-   * schemaETag in the range of a specified
-   * startTime and endTime using savepointTimestamp
-   * 
-   * @param uri the url for the server
-   * @param appId identifies the application
-   * @param tableId the table identifier or name
-   * @param schemaETag identifies an instance of the table
-   * @param startTime a required timestamp used to get all rows with a time greater than or equal to it.  
-   * The format of startTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
-   * @param endTime an optional timestamp used to get all rows with a time less than or equal to it.  
-   * The format for endTime is yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
-   * @param cursor query parameter that identifies the point at which to 
-   * resume the query
-   * @param fetchLimit query parameter that defines the number of rows to 
-   * return
-   * @return a JSONObject with the row data
-   * @throws Exception any exception encountered is thrown to the caller
-   */
-  public JSONObject queryRowsInTimeRangeWithSavepointTimestamp(String uri, String appId, String tableId, String schemaETag,
-      String startTime, String endTime, String cursor, String fetchLimit) throws Exception {
-    JSONObject obj = null;
-    
-    if (httpClient == null) {
-      throw new IllegalStateException("The initialization function must be called");
-    }
-
-    if (startTime == null || startTime.isEmpty()) {
-      throw new IllegalArgumentException("startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
-    }
-    
-    HttpGet request = null;
-    try {
-      //RestClient restClient = new RestClient();
-  
-      String agg_uri = uri + separator + appId + uriTablesFragment + separator + tableId
-          + uriRefFragment + schemaETag + uriQueryFragment + uriSavepointTimestamp;
-      
-      agg_uri = agg_uri + "?" + queryParamStartTime + startTime;
-      
       if (endTime != null && !endTime.isEmpty()) {
-        agg_uri = agg_uri + "&" + queryParamEndTime + endTime;
+        agg_uri = agg_uri + "&" + END_TIME_QUERY_PARAM + endTime;
       }
-  
+
       if (cursor != null && !cursor.isEmpty()) {
-        agg_uri = agg_uri + "&" + queryParamCursor + cursor;
+        agg_uri = agg_uri + "&" + CURSOR_QUERY_PARAM + cursor;
       }
-  
+
       if (fetchLimit != null && !fetchLimit.isEmpty()) {
-        agg_uri = agg_uri + "&" + queryParamFetchLimit + fetchLimit;
+        agg_uri = agg_uri + "&" + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
       }
-  
-      //Resource tableResource = restClient.resource(agg_uri);
+
       request = new HttpGet(agg_uri);
       request.addHeader("content-type", "application/json; charset=utf-8");
       request.addHeader("accept", "application/json");
       request.addHeader("accept-charset", "utf-8");
       request.addHeader("X-OpenDataKit-Version", "2.0");
-      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
-  
-      //String tableRes = tableResource.accept("application/json").get(String.class);
+      System.out.println("queryRowsInTimeRangeWithLastUpdateDate: agg uri is " + agg_uri);
+
       HttpResponse response = null;
       if (localContext != null) {
         response = httpClient.execute(request, localContext);
       } else {
         response = httpClient.execute(request);
       }
-      
+
       BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
-          .getContent(), Charset.forName("UTF-8")));
+          .getContent(), Charset.forName(UTF8_STR)));
       StringBuilder strLine = new StringBuilder();
       String resLine;
       while ((resLine = rd.readLine()) != null) {
         strLine.append(resLine);
       }
       String tableRes = strLine.toString();
-      
+
       obj = new JSONObject(tableRes);
-      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId + " is " + obj.toString());
+      System.out.println("queryRowsInTimeRangeWithLastUpdateDate: result for " + tableId + " is "
+          + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+
+    return obj;
+  }
+
+  /**
+   * Returns a JSONObject of the rows that can be found in a table specified
+   * tableId and schemaETag in the range of a specified startTime and endTime
+   * using savepointTimestamp
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param startTime
+   *          a required timestamp used to get all rows with a time greater than
+   *          or equal to it. The format of startTime is
+   *          yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param endTime
+   *          an optional timestamp used to get all rows with a time less than
+   *          or equal to it. The format for endTime is
+   *          yyyy-MM-dd:HH:mm:ss.SSSSSSSSS.
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
+   * @return a JSONObject with the row data
+   * 
+   * @throws IOException
+   * @throws JSONException
+   * 
+   */
+  public JSONObject queryRowsInTimeRangeWithSavepointTimestamp(String uri, String appId,
+      String tableId, String schemaETag, String startTime, String endTime, String cursor,
+      String fetchLimit) throws IOException, JSONException {
+    JSONObject obj = null;
+
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    if (startTime == null || startTime.isEmpty()) {
+      throw new IllegalArgumentException(
+          "startTime must have a valid value in the format yyyy-MM-dd:HH:mm:ss.SSSSSSSSS");
+    }
+
+    HttpGet request = null;
+    try {
+      String agg_uri = uri + SEPARATOR_STR + appId + TABLES_URI_FRAGMENT + SEPARATOR_STR + tableId
+          + REF_URI_FRAGMENT + schemaETag + QUERY_URI_FRAGMENT + SAVEPOINT_TIMESTAMP_URI;
+
+      agg_uri = agg_uri + "?" + START_TIME_QUERY_PARAM + startTime;
+
+      if (endTime != null && !endTime.isEmpty()) {
+        agg_uri = agg_uri + "&" + END_TIME_QUERY_PARAM + endTime;
+      }
+
+      if (cursor != null && !cursor.isEmpty()) {
+        agg_uri = agg_uri + "&" + CURSOR_QUERY_PARAM + cursor;
+      }
+
+      if (fetchLimit != null && !fetchLimit.isEmpty()) {
+        agg_uri = agg_uri + "&" + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
+      }
+
+      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: agg uri is " + agg_uri);
+      
+      request = new HttpGet(agg_uri);
+      request.addHeader("content-type", "application/json; charset=utf-8");
+      request.addHeader("accept", "application/json");
+      request.addHeader("accept-charset", "utf-8");
+      request.addHeader("X-OpenDataKit-Version", "2.0");
+
+      HttpResponse response = null;
+      if (localContext != null) {
+        response = httpClient.execute(request, localContext);
+      } else {
+        response = httpClient.execute(request);
+      }
+
+      BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity()
+          .getContent(), Charset.forName(UTF8_STR)));
+      StringBuilder strLine = new StringBuilder();
+      String resLine;
+      while ((resLine = rd.readLine()) != null) {
+        strLine.append(resLine);
+      }
+      String tableRes = strLine.toString();
+
+      obj = new JSONObject(tableRes);
+      System.out.println("queryRowsInTimeRangeWithSavepointTimestamp: result for " + tableId
+          + " is " + obj.toString());
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -3444,7 +3692,7 @@ public class WinkClient {
     }
     return obj;
   }
-  
+
   public void close() {
     if (httpClient != null) {
       try {

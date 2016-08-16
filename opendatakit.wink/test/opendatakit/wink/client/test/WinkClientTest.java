@@ -48,7 +48,7 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "https://clarlars.appspot.com";
+    agg_url = "https://test.appspot.com";
     appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
@@ -243,8 +243,8 @@ public class WinkClientTest extends TestCase {
 
     try {
       
-      if (rowRes.has(WinkClient.orderedColumnsDef)) {
-        JSONArray ordCols = rowRes.getJSONArray(WinkClient.orderedColumnsDef);
+      if (rowRes.has(WinkClient.ORDERED_COLUMNS_DEF)) {
+        JSONArray ordCols = rowRes.getJSONArray(WinkClient.ORDERED_COLUMNS_DEF);
         assertEquals(1, ordCols.size());
         JSONObject col = ordCols.getJSONObject(0);
         String recVal = col.getString("value");
@@ -1498,6 +1498,24 @@ public class WinkClientTest extends TestCase {
       TestCase.fail("testGetTableWhenTableExists_ExpectPass: expected pass for getting table");
     }
   }
+  
+  public void testGetTableWhenTableDoesNotExists_ExpectPass() {
+    String testTableId = "test81";
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      JSONObject obj = wc.getTable(agg_url, appId, testTableId);
+      assertNull(obj);
+      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetTableWhenTableExists_ExpectPass: expected pass for getting table");
+    }
+  }
 
   public void testWriteTableDefinitionToCSVWhenTableExists_ExpectPass() {
     String testTableId = "test9";
@@ -2244,11 +2262,11 @@ public class WinkClientTest extends TestCase {
       // Get the table definition
       JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
-      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
-        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
+      if (tableDef.containsKey(WinkClient.ORDERED_COLUMNS_DEF)) {
+        JSONArray cols = tableDef.getJSONArray(WinkClient.ORDERED_COLUMNS_DEF);
         assertEquals(cols.size(), 1);
         JSONObject col = cols.getJSONObject(cols.size() - 1);
-        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
+        assertEquals("Date_and_Time", col.getString(WinkClient.ELEM_KEY_JSON));
       }
 
       // Now delete the table
@@ -2290,18 +2308,18 @@ public class WinkClientTest extends TestCase {
       // Get the table definition
       JSONObject tableDef = wc.getTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
-      if (tableDef.containsKey(WinkClient.orderedColumnsDef)) {
-        JSONArray cols = tableDef.getJSONArray(WinkClient.orderedColumnsDef);
+      if (tableDef.containsKey(WinkClient.ORDERED_COLUMNS_DEF)) {
+        JSONArray cols = tableDef.getJSONArray(WinkClient.ORDERED_COLUMNS_DEF);
         assertEquals(cols.size(), 1);
         JSONObject col = cols.getJSONObject(cols.size() - 1);
-        assertEquals("Date_and_Time", col.getString(WinkClient.jsonElemKey));
+        assertEquals("Date_and_Time", col.getString(WinkClient.ELEM_KEY_JSON));
       }
       
       // Create Rows for the newly created table
       for (int i = 0; i < testSize; i++) {
         
         tempRow = new JSONObject();
-        tempRow.put(WinkClient.jsonId, Integer.toString(i));
+        tempRow.put(WinkClient.ID_JSON, Integer.toString(i));
         
         JSONArray ordCols = new JSONArray();
         JSONObject col = new JSONObject();
@@ -2309,7 +2327,7 @@ public class WinkClientTest extends TestCase {
         col.put("value", TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
         ordCols.add(col);
         
-        tempRow.put(WinkClient.orderedColumnsDef, ordCols);
+        tempRow.put(WinkClient.ORDERED_COLUMNS_DEF, ordCols);
         System.out.print("testCreateRowsUsingJSONBulkUpload_ExpectPass: tempRow is " + tempRow.toString());
         rowsObj.add(tempRow);
       }
@@ -2644,8 +2662,8 @@ public class WinkClientTest extends TestCase {
       dkv = new DataKeyValue("scan_output_directory", colValue2);
       dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
-      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.jsonRowETag), row.getFormId(), jsonRow.getString(WinkClient.jsonLocale), jsonRow.getString(WinkClient.jsonSavepointType), 
-          jsonRow.getString(WinkClient.jsonSavepointTimestamp), jsonRow.getString(WinkClient.jsonSavepointCreator), row.getFilterScope(), dkvl);
+      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.ROW_ETAG_JSON), row.getFormId(), jsonRow.getString(WinkClient.LOCALE_JSON), jsonRow.getString(WinkClient.SAVEPOINT_TYPE_JSON), 
+          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getFilterScope(), dkvl);
       
       ArrayList<Row> rowList = new ArrayList<Row>();
       rowList.add(rowObj);
@@ -2722,8 +2740,8 @@ public class WinkClientTest extends TestCase {
       dkv = new DataKeyValue("scan_output_directory", colValue2);
       dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
-      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.jsonRowETag), row.getFormId(), jsonRow.getString(WinkClient.jsonLocale), jsonRow.getString(WinkClient.jsonSavepointType), 
-          jsonRow.getString(WinkClient.jsonSavepointTimestamp), jsonRow.getString(WinkClient.jsonSavepointCreator), row.getFilterScope(), dkvl);
+      Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.ROW_ETAG_JSON), row.getFormId(), jsonRow.getString(WinkClient.LOCALE_JSON), jsonRow.getString(WinkClient.SAVEPOINT_TYPE_JSON), 
+          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getFilterScope(), dkvl);
       
       ArrayList<Row> rowList = new ArrayList<Row>();
       rowList.add(rowObj);
@@ -2774,7 +2792,7 @@ public class WinkClientTest extends TestCase {
     String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
     
     String pathToSaveFile = absolutePathOfTestFiles + "downloadBatchInstance";
-    String pathToVerify = pathToSaveFile + WinkClient.separator + relativePathOnServer;
+    String pathToVerify = pathToSaveFile + WinkClient.SEPARATOR_STR + relativePathOnServer;
 
     try {
       WinkClient wc = new WinkClient();
