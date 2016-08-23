@@ -27,6 +27,7 @@ import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
@@ -1147,21 +1148,16 @@ public class WinkClient {
 
       request = new HttpGet(agg_uri);
       HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+      
+      int statusCode = response.getStatusLine().getStatusCode();
+      
+      if (statusCode == HttpStatus.SC_NOT_FOUND) {
+        return null;
+      }
 
       obj = convertResponseToJSONObject(response);
 
       System.out.println("getTable: result is for tableId " + tableId + " is " + obj.toString());
-
-      // Check to see if the table was not found
-      // If the table was not found return null
-      if (obj.has(TYPE_STR)) {
-        String errorType = obj.getString(TYPE_STR);
-        if (errorType != null && errorType.length() > 0) {
-          if (errorType.equals(ErrorType.RESOURCE_NOT_FOUND.toString())) {
-            return null;
-          }
-        }
-      }
 
     } finally {
       if (request != null) {
