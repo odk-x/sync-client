@@ -21,10 +21,10 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
+import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome.OutcomeType;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
-import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 import org.opendatakit.wink.client.WinkClient;
 
 public class WinkClientTest extends TestCase {
@@ -48,7 +48,7 @@ public class WinkClientTest extends TestCase {
     //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
     //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "https://test.appspot.com";
+    agg_url = "https://clarlars.appspot.com";
     appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
@@ -80,6 +80,10 @@ public class WinkClientTest extends TestCase {
 
     try {
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
+      
       JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
       JSONArray files = obj.getJSONArray("files");
 
@@ -104,6 +108,10 @@ public class WinkClientTest extends TestCase {
 
 	    try {
 	      wc.init(host, userName, password);
+	      
+	      // Temp hack until Aggregate is fixed
+	      wc.getUsers(agg_url);
+	      
 	      JSONObject obj = wc.getManifestForTableId(agg_url, appId, tableId, version);
 	      JSONArray files = obj.getJSONArray("files");
 
@@ -130,6 +138,10 @@ public class WinkClientTest extends TestCase {
 
     try {
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
+      
       JSONObject obj = wc.getManifestForRow(agg_url, appId, tableId, schemaETag, rowId);
       JSONArray files = obj.getJSONArray("files");
 
@@ -291,6 +303,10 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
+      
       JSONObject obj = wc.getTables(agg_url, appId);
 
       JSONArray tables = obj.getJSONArray("tables");
@@ -323,6 +339,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -359,6 +378,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -433,6 +455,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.uploadFile(null, appId, testFile, relativeTestFilePath, version);
@@ -460,6 +485,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, null, relativeTestFilePath, version);
@@ -488,6 +516,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.uploadFile(agg_url, appId, testFile, null, version);
@@ -518,6 +549,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -562,6 +596,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -605,6 +642,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.downloadFile(null, appId, testFile, relativeTestFilePath, version);
@@ -633,6 +673,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.downloadFile(agg_url, appId, null, relativeTestFilePath, version);
@@ -661,6 +704,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.downloadFile(agg_url, appId, testFile, null, version);
@@ -688,6 +734,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -726,6 +775,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -764,6 +816,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.deleteFile(null, appId, relativeTestFilePath, version);
@@ -791,6 +846,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Check the data from the file
       wc.deleteFile(agg_url, appId, null, version);
@@ -820,8 +878,11 @@ public class WinkClientTest extends TestCase {
       wc.init(host, userName, password);
 
       // Put the file on the server
-      //wc.init();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
+      
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
 
       // Test the manifest
@@ -867,6 +928,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Test the manifest
       JSONObject obj = wc.getManifestForAppLevelFiles(agg_url, appId, version);
@@ -901,6 +965,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Test the manifest
       wc.getManifestForAppLevelFiles(null, appId, version);
@@ -926,6 +993,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Test the manifest
       wc.getManifestForAppLevelFiles(null, appId, version);
@@ -956,6 +1026,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Put the file on the server
       wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
@@ -995,6 +1068,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Get the file off of the server
       wc.getAllAppLevelFilesFromUri(null, appId, dowloadTestDir, version);
@@ -1021,6 +1097,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       // Get the file off of the server
       wc.getAllAppLevelFilesFromUri(agg_url, appId, null, version);
@@ -1054,6 +1133,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1104,6 +1186,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1138,6 +1223,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1169,6 +1257,9 @@ public class WinkClientTest extends TestCase {
     try {
       wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, null);
 
@@ -1195,6 +1286,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateTableWithCSVAndValidData_ExpectPass: result is " + result);
@@ -1235,6 +1329,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
       
       File file = new File(csvFile);
 
@@ -1283,6 +1380,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1324,6 +1424,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1370,6 +1473,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1409,7 +1515,7 @@ public class WinkClientTest extends TestCase {
   }
   
   public void testGetTablesForTestNeedToDelete_ExpectPass() {
-    String testTableId = "test7";
+    String testTableId = "test71";
     String colName = "scan_output_directory";
     String colKey = "scan_output_directory";
     String colType = "string";
@@ -1421,6 +1527,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1471,6 +1580,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1505,6 +1617,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject obj = wc.getTable(agg_url, appId, testTableId);
       assertNull(obj);
@@ -1529,6 +1644,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1571,6 +1689,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1618,6 +1739,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1667,6 +1791,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVWithValidFile_ExpectPass: result is " + result);
@@ -1705,6 +1832,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testGetRowsWhenRowsExist_ExpectPass: result is " + result);
@@ -1743,6 +1873,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testGetRowsSinceWhenRowsExist_ExpectPass: result is " + result);
@@ -1783,6 +1916,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result is " + result);
@@ -1823,6 +1959,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1861,7 +2000,7 @@ public class WinkClientTest extends TestCase {
       // Now delete the row
       // wc.deleteRow(agg_url, appId, testTableId, tableSchemaETag, RowId, res.getString("rowETag"));
       Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString("rowETag"), row.getFormId(), row.getLocale(), row.getSavepointType(), 
-          row.getSavepointTimestamp(), row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+          row.getSavepointTimestamp(), row.getSavepointCreator(), row.getRowFilterScope(), row.getValues());
       
       // Make sure that all of these rows are marked for deletion
       rowObj.setDeleted(true);
@@ -1902,6 +2041,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -1944,6 +2086,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2018,6 +2163,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2092,6 +2240,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2163,6 +2314,9 @@ public class WinkClientTest extends TestCase {
 //    try {
 //      WinkClient wc = new WinkClient();
 //      wc.init(host, userName, password);
+//  
+//      // Temp hack until Aggregate is fixed
+//      wc.getUsers(agg_url);
 // 
 //      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
 //      System.out.println("testWriteRowDataToCSVWithLotsOfRows_ExpectPass: result is " + result);
@@ -2210,6 +2364,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testWriteRowDataToCSVWhenRowsExist_ExpectPass: result of create table is " + result);
@@ -2249,6 +2406,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
       System.out.println("testCreateTableWithJSON_ExpectPass: result is " + result);
@@ -2295,6 +2455,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithJSON(agg_url, appId, testTableId, null, jsonString);
       System.out.println("testCreateRowsUsingJSONBulkUpload_ExpectPass: result is " + result);
@@ -2371,6 +2534,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2429,6 +2595,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2503,6 +2672,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2566,6 +2738,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2623,6 +2798,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2640,7 +2818,7 @@ public class WinkClientTest extends TestCase {
       ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
 
-      Row row = Row.forInsert(RowId, null, null, null, null, null, Scope.EMPTY_SCOPE, dkvl);
+      Row row = Row.forInsert(RowId, null, null, null, null, null, RowFilterScope.EMPTY_ROW_FILTER, dkvl);
       ArrayList<Row> rowArrayList = new ArrayList<Row>();
       rowArrayList.add(row);
       wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowArrayList, 1);
@@ -2663,7 +2841,7 @@ public class WinkClientTest extends TestCase {
       dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
       Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.ROW_ETAG_JSON), row.getFormId(), jsonRow.getString(WinkClient.LOCALE_JSON), jsonRow.getString(WinkClient.SAVEPOINT_TYPE_JSON), 
-          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getFilterScope(), dkvl);
+          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getRowFilterScope(), dkvl);
       
       ArrayList<Row> rowList = new ArrayList<Row>();
       rowList.add(rowObj);
@@ -2701,6 +2879,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2718,7 +2899,7 @@ public class WinkClientTest extends TestCase {
       ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
 
-      Row row = Row.forInsert(RowId, null, null, null, null, null, Scope.EMPTY_SCOPE, dkvl);
+      Row row = Row.forInsert(RowId, null, null, null, null, null, RowFilterScope.EMPTY_ROW_FILTER, dkvl);
       ArrayList<Row> rowArrayList = new ArrayList<Row>();
       rowArrayList.add(row);
       wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowArrayList, 1);
@@ -2741,7 +2922,7 @@ public class WinkClientTest extends TestCase {
       dkvl = new ArrayList<DataKeyValue>();
       dkvl.add(dkv);
       Row rowObj = Row.forUpdate(row.getRowId(), jsonRow.getString(WinkClient.ROW_ETAG_JSON), row.getFormId(), jsonRow.getString(WinkClient.LOCALE_JSON), jsonRow.getString(WinkClient.SAVEPOINT_TYPE_JSON), 
-          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getFilterScope(), dkvl);
+          jsonRow.getString(WinkClient.SAVEPOINT_TIMESTAMP_JSON), jsonRow.getString(WinkClient.SAVEPOINT_CREATOR_JSON), row.getRowFilterScope(), dkvl);
       
       ArrayList<Row> rowList = new ArrayList<Row>();
       rowList.add(rowObj);
@@ -2797,6 +2978,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2874,6 +3058,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -2896,7 +3083,7 @@ public class WinkClientTest extends TestCase {
       Date date = new Date();
       String startTime = dateFormat.format(date);   
         
-      Row row = Row.forInsert(RowId, null, null, null, startTime, null, Scope.EMPTY_SCOPE, dkvl);
+      Row row = Row.forInsert(RowId, null, null, null, startTime, null, RowFilterScope.EMPTY_ROW_FILTER, dkvl);
       
       ArrayList<Row> rowList = new ArrayList<Row>();
       rowList.add(row);
@@ -2935,6 +3122,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVBulkUpload_ExpectPass: result is " + result);
@@ -2974,6 +3164,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
       System.out.println("testCreateRowsUsingCSVBulkUploadWithLotsOfData_ExpectPass: result is " + result);
@@ -3007,6 +3200,9 @@ public class WinkClientTest extends TestCase {
 	    try {
 	      WinkClient wc = new WinkClient();
 	      wc.init(host, userName, password);
+	      
+	      // Temp hack until Aggregate is fixed
+	      wc.getUsers(agg_url);
 
 	      JSONObject result = wc.createTableWithCSV(agg_url, appId, testTableId, null, csvFile);
 	      System.out.println("testCreateRowsUsingCSVBulkUploadWithAMediumAmountOfData_ExpectPass: result is " + result);
@@ -3040,6 +3236,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
       
       File file1 = new File(csvFile);
 
@@ -3085,6 +3284,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       ArrayList<Column> columns = new ArrayList<Column>();
 
@@ -3143,6 +3345,9 @@ public class WinkClientTest extends TestCase {
     try {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
+      
+      // Temp hack until Aggregate is fixed
+      wc.getUsers(agg_url);
 
       wc.pushAllDataToUri(agg_url, appId, dirToGetDataFrom, version);
       File fileDirToGetDataFrom = new File(dirToGetDataFrom);
@@ -3209,6 +3414,24 @@ public class WinkClientTest extends TestCase {
     } catch (Exception e) {
       e.printStackTrace();
       TestCase.fail("testPushAllDataToUri_ExpectPass: expected pass");
+    }
+  }
+  
+  public void testGetUsersWhenUserExists_ExpectPass() {
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      ArrayList<String> result = wc.getUsers(agg_url);
+      
+      //assertNotNull(result);
+      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetUsersWhenUserExists_ExpectPass: expected pass for getting users");
     }
   }
 }

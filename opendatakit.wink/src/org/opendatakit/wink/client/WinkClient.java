@@ -61,13 +61,13 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
+import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
-import org.opendatakit.aggregate.odktables.rest.entity.Scope;
-import org.opendatakit.aggregate.odktables.rest.entity.Error.ErrorType;
 import org.apache.commons.fileupload.MultipartStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.http.client.protocol.HttpClientContext;
@@ -194,6 +194,10 @@ public class WinkClient {
   public static final int MAX_BATCH_SIZE = 10485760;
 
   public static final String TYPE_STR = "type";
+  
+  public static final String USERS_STR = "users";
+  
+  public static final String LIST_STR = "list";
 
   protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
@@ -377,6 +381,63 @@ public class WinkClient {
 
     httpClient = clientBuilder.build();
 
+  }
+  
+  /**
+   * Returns a list of users currently on the server in a JSONObject
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @return a JSONObject with the list of tables
+   * 
+   * @throws ClientProtocolException
+   * @throws IOException
+   * @throws JSONException
+   */
+  public ArrayList<String> getUsers(String agg_url) throws ClientProtocolException, 
+      IOException, JSONException {
+    ArrayList<String> rolesList = null;
+
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    HttpGet request = null;
+
+    try {
+
+      String agg_uri = UriUtils.getUsersListUri(agg_url);
+
+      System.out.println("getUsers: agg uri is " + agg_uri);
+
+      request = new HttpGet(agg_uri);
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+
+      String res = convertResponseToString(response);
+      
+      if (response.getStatusLine().getStatusCode() < 200
+          || response.getStatusLine().getStatusCode() >= 300) {
+        System.out.println("getUsers: return null status code: " + response.getStatusLine().getStatusCode());
+        System.out.println("getUsers: response is " + res);
+        return null;
+      }
+
+      TypeReference ref = new TypeReference<ArrayList<Map<String,Object>>>() { };
+      
+      ObjectMapper mapper = new ObjectMapper();
+
+      rolesList = mapper.readValue(res, ref);
+
+      System.out.println("getUsers: result is " + rolesList.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+
+    return rolesList;
   }
 
   /**
@@ -2179,7 +2240,8 @@ public class WinkClient {
     String savepointType = SavepointTypeManipulator.complete();
     String savepointTimestamp = null;
     String savepointCreator = "anonymous";
-    Scope defaultScope = Scope.EMPTY_SCOPE;
+    
+    RowFilterScope defaultScope = RowFilterScope.EMPTY_ROW_FILTER;
     String dataETag = null;
 
     if (batchSize == 0) {
@@ -2195,7 +2257,7 @@ public class WinkClient {
       Row row = rowArrayList.get(i);
       Row rowObj = Row.forInsert(row.getRowId(), row.getFormId(), row.getLocale(),
           row.getSavepointType(), row.getSavepointTimestamp(), row.getSavepointCreator(),
-          row.getFilterScope(), row.getValues());
+          row.getRowFilterScope(), row.getValues());
 
       // Ensure that adequate defaults are set for all rows
       if (rowObj.getRowId() == null || rowObj.getRowId().length() == 0) {
@@ -2220,8 +2282,8 @@ public class WinkClient {
         rowObj.setSavepointCreator(savepointCreator);
       }
 
-      if (rowObj.getFilterScope() == null) {
-        rowObj.setFilterScope(defaultScope);
+      if (rowObj.getRowFilterScope() == null) {
+        rowObj.setRowFilterScope(defaultScope);
       }
 
       processedRowArrayList.add(rowObj);
@@ -2272,7 +2334,7 @@ public class WinkClient {
     String savepointType = SavepointTypeManipulator.complete();
     String savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     String savepointCreator = "anonymous";
-    Scope defaultScope = Scope.EMPTY_SCOPE;
+    RowFilterScope defaultScope = RowFilterScope.EMPTY_ROW_FILTER;
     String dataETag = null;
 
     if (batchSize == 0) {
@@ -2327,7 +2389,7 @@ public class WinkClient {
 
       if (rowObj.containsKey(FILTER_SCOPE_JSON)) {
         JSONObject filterObj = rowObj.getJSONObject(FILTER_SCOPE_JSON);
-        defaultScope = Scope.asScope(filterObj.getString(TYPE_STR), filterObj.getString("value"));
+        defaultScope = RowFilterScope.asRowFilter(filterObj.getString(TYPE_STR), filterObj.getString("value"));
       }
 
       Row row = Row.forInsert(rowId, formId, locale, savepointType, savepointTimestamp,
@@ -2608,7 +2670,7 @@ public class WinkClient {
         Row row = rowArrayList.get(i);
         Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
             row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
-            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+            row.getSavepointCreator(), row.getRowFilterScope(), row.getValues());
 
         processedRowArrayList.add(rowObj);
 
@@ -2679,7 +2741,7 @@ public class WinkClient {
         Row row = rowArrayList.get(i);
         Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
             row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
-            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+            row.getSavepointCreator(), row.getRowFilterScope(), row.getValues());
 
         // Make sure that all of these rows are marked for deletion
         rowObj.setDeleted(true);
@@ -2753,7 +2815,7 @@ public class WinkClient {
         Row row = rowArrayList.get(i);
         Row rowObj = Row.forUpdate(row.getRowId(), row.getRowETag(), row.getFormId(),
             row.getLocale(), row.getSavepointType(), row.getSavepointTimestamp(),
-            row.getSavepointCreator(), row.getFilterScope(), row.getValues());
+            row.getSavepointCreator(), row.getRowFilterScope(), row.getValues());
 
         processedRowArrayList.add(rowObj);
       }

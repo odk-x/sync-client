@@ -2,6 +2,12 @@ package org.opendatakit.wink.client;
 
 public class UriUtils {
   
+  public static String getUsersListUri(String uri) {
+    String usersUri = uri + WinkClient.SEPARATOR_STR 
+        + WinkClient.USERS_STR + WinkClient.SEPARATOR_STR + WinkClient.LIST_STR;
+    return usersUri;
+  }
+  
   public static String getAppLevelManifestUri(String uri, String appId, String version) {
     String appLevelManifestUri = uri + WinkClient.SEPARATOR_STR + appId + WinkClient.SEPARATOR_STR 
         + WinkClient.MANIFEST_STR + WinkClient.SEPARATOR_STR + version;
