@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.zip.DataFormatException;
 
+import org.apache.commons.fileupload.MultipartStream;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -36,21 +37,20 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.AuthSchemes;
-import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
+import org.apache.http.message.BasicHeader;
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONException;
 import org.apache.wink.json4j.JSONObject;
@@ -64,14 +64,10 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
-import org.apache.commons.fileupload.MultipartStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.config.SocketConfig;
 
 /**
  * Class used to communicate with the ODK and Mezuri servers via the REST API.
@@ -203,7 +199,7 @@ public class WinkClient {
 
   private CloseableHttpClient httpClient = null;
 
-  private HttpContext localContext = null;
+  private HttpClientContext localContext = null;
 
   private CookieStore cookieStore = null;
 
@@ -291,17 +287,15 @@ public class WinkClient {
     // Context
     // context holds authentication state machine, so it cannot be
     // shared across independent activities.
-    localContext = new BasicHttpContext();
-
-    cookieStore = new BasicCookieStore();
+    localContext = HttpClientContext.create();
+    
     credsProvider = new BasicCredentialsProvider();
 
     AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
     Credentials c = new UsernamePasswordCredentials(userName, password);
     credsProvider.setCredentials(a, c);
 
-    localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
-    localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
+    localContext.setCredentialsProvider(credsProvider);
 
     SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT)
         .setSoTimeout(2 * CONNECTION_TIMEOUT).build();
@@ -309,7 +303,6 @@ public class WinkClient {
     // if possible, bias toward digest auth (may not be in 4.0 beta 2)
     List<String> targetPreferredAuthSchemes = new ArrayList<String>();
     targetPreferredAuthSchemes.add(AuthSchemes.DIGEST);
-    targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
 
     RequestConfig requestConfig = RequestConfig
         .copy(RequestConfig.DEFAULT)
@@ -321,12 +314,41 @@ public class WinkClient {
         // max redirects is set to 4
         .setMaxRedirects(4).setCircularRedirectsAllowed(true)
         .setTargetPreferredAuthSchemes(targetPreferredAuthSchemes)
-        .setCookieSpec(CookieSpecs.DEFAULT).build();
+     	.setProxyPreferredAuthSchemes(targetPreferredAuthSchemes)
+        .build();
 
     httpClient = HttpClientBuilder.create().setDefaultSocketConfig(socketConfig)
         .setDefaultRequestConfig(requestConfig).build();
+    
   }
 
+  public void initAnonymous(String host) {
+	    int CONNECTION_TIMEOUT = 60000;
+
+	    // Context
+	    // context holds authentication state machine, so it cannot be
+	    // shared across independent activities.
+	    localContext = HttpClientContext.create();
+
+	    SocketConfig socketConfig = SocketConfig.copy(SocketConfig.DEFAULT)
+	        .setSoTimeout(2 * CONNECTION_TIMEOUT).build();
+
+	    RequestConfig requestConfig = RequestConfig
+	        .copy(RequestConfig.DEFAULT)
+	        .setConnectTimeout(CONNECTION_TIMEOUT)
+	        // support authenticating
+	        .setAuthenticationEnabled(false)
+	        // support redirecting to handle http: => https: transition
+	        .setRedirectsEnabled(true)
+	        // max redirects is set to 4
+	        .setMaxRedirects(4).setCircularRedirectsAllowed(true)
+	        .build();
+
+	    httpClient = HttpClientBuilder.create().setDefaultSocketConfig(socketConfig)
+	        .setDefaultRequestConfig(requestConfig).build();
+	    
+	  }
+  
   /**
    * Init client parameters for authentication
    * 
@@ -340,48 +362,46 @@ public class WinkClient {
    *          the socket config parameters to use
    * @param reqConfig
    *          the request config parameters to use
-   * @param basicStore
-   *          the cookie store to use
    * @param basicProvider
    *          the credentials provider to use
    */
-  public void init(String host, String userName, String password, SocketConfig socketConfig,
-      RequestConfig reqConfig, BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
-
-    localContext = new BasicHttpContext();
-
-    if (basicStore != null) {
-      cookieStore = basicStore;
-      localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
-    }
-
-    if (basicProvider != null) {
-      credsProvider = basicProvider;
-    }
-
-    if (credsProvider != null && userName != null && password != null && host != null) {
-      AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
-      Credentials c = new UsernamePasswordCredentials(userName, password);
-      credsProvider.setCredentials(a, c);
-    }
-
-    if (credsProvider != null) {
-      localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
-    }
-
-    HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-
-    if (socketConfig != null) {
-      clientBuilder.setDefaultSocketConfig(socketConfig);
-    }
-
-    if (reqConfig != null) {
-      clientBuilder.setDefaultRequestConfig(reqConfig);
-    }
-
-    httpClient = clientBuilder.build();
-
-  }
+//  public void init(String host, String userName, String password, SocketConfig socketConfig,
+//      RequestConfig reqConfig, BasicCookieStore basicStore, BasicCredentialsProvider basicProvider) {
+//
+//    localContext = new BasicHttpContext();
+//
+//    if (basicStore != null) {
+//      cookieStore = basicStore;
+//      localContext.setAttribute(HttpClientContext.COOKIE_STORE, cookieStore);
+//    }
+//
+//    if (basicProvider != null) {
+//      credsProvider = basicProvider;
+//    }
+//
+//    if (credsProvider != null && userName != null && password != null && host != null) {
+//      AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
+//      Credentials c = new UsernamePasswordCredentials(userName, password);
+//      credsProvider.setCredentials(a, c);
+//    }
+//
+//    if (credsProvider != null) {
+//      localContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credsProvider);
+//    }
+//
+//    HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+//
+//    if (socketConfig != null) {
+//      clientBuilder.setDefaultSocketConfig(socketConfig);
+//    }
+//
+//    if (reqConfig != null) {
+//      clientBuilder.setDefaultRequestConfig(reqConfig);
+//    }
+//
+//    httpClient = clientBuilder.build();
+//
+//  }
   
   /**
    * Returns a list of users currently on the server in a JSONObject
@@ -2432,11 +2452,12 @@ public class WinkClient {
    * @throws FileNotFoundException
    * @throws IOException
    * @throws DataFormatException
+ * @throws JSONException 
    * 
    */
   public void createRowsUsingCSVBulkUpload(String uri, String appId, String tableId,
       String schemaETag, String csvFilePath, int batchSize) throws FileNotFoundException,
-      IOException, DataFormatException {
+      IOException, DataFormatException, JSONException {
     RFC4180CsvReader reader;
 
     File file = new File(csvFilePath);
@@ -2471,11 +2492,12 @@ public class WinkClient {
    *          
    * @throws IOException 
    * @throws DataFormatException
+ * @throws JSONException 
    * 
    */
   public void createRowsUsingCSVInputStreamBulkUpload(String uri, String appId, String tableId,
       String schemaETag, InputStream csvInputStream, int batchSize) throws IOException,
-      DataFormatException {
+      DataFormatException, JSONException {
     RFC4180CsvReader reader;
 
     if (csvInputStream.available() <= 0) {
@@ -2493,7 +2515,7 @@ public class WinkClient {
   private void createRowsUsingCSVBulkUploadProcessing(String uri, String appId, String tableId,
       String schemaETag, int batchSize, RFC4180CsvReader reader) throws IOException,
       DataFormatException, JsonProcessingException, UnsupportedEncodingException,
-      ClientProtocolException {
+      ClientProtocolException, JSONException {
 
     String dataETag = null;
 
@@ -2528,7 +2550,6 @@ public class WinkClient {
           "The csv file used to create rows does not have the correct columns in the first row");
     }
 
-    try {
       String[] line;
       ArrayList<Row> rowArrayList = new ArrayList<Row>();
       line = reader.readNext();
@@ -2563,9 +2584,6 @@ public class WinkClient {
         dataETag = getTableDataETag(uri, appId, tableId);
         bulkRowsSender(rowArrayList, agg_uri, tableId, dataETag, false);
       }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 
   private RowOutcomeList bulkRowsSender(ArrayList<Row> rowArrayList, String agg_uri,
