@@ -71,6 +71,15 @@ public abstract class AbstractPrivTestBase extends TestCase {
 	}
 
 	
+
+	void verifyAuthenticationFailure(int responsecode, WinkClient syncPrivClient) {
+		if(syncPrivClient.isAuthenticationEnabled()) {
+			assertTrue(responsecode == 405);
+		} else {
+			assertTrue(responsecode == 401);
+		}
+	}
+	
 	private boolean checkThatFileExistsOnServer(String agg_url, String appId, String relativeFileNameOnServer) {
 		// Make sure the server has added the file
 		boolean found = false;
@@ -1093,7 +1102,7 @@ public abstract class AbstractPrivTestBase extends TestCase {
 
 			int responsecode = syncPrivClient.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
-			assertTrue(responsecode == 401);
+			verifyAuthenticationFailure(responsecode, syncPrivClient);
 
 			assertTrue(doesTableExistOnServer(testTableId, tableSchemaETag));
 

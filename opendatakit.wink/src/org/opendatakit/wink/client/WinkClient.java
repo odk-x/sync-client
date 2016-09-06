@@ -347,7 +347,16 @@ public class WinkClient {
 	    httpClient = HttpClientBuilder.create().setDefaultSocketConfig(socketConfig)
 	        .setDefaultRequestConfig(requestConfig).build();
 	    
+
 	  }
+  
+  	public boolean isAuthenticationEnabled() {
+  	    if (localContext == null) {
+  	      throw new IllegalStateException("The initialization function must be called");
+  	    }
+
+  		return localContext.getRequestConfig().isAuthenticationEnabled();
+  	}
   
   /**
    * Init client parameters for authentication
