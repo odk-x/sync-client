@@ -74,7 +74,7 @@ public abstract class AbstractPrivTestBase extends TestCase {
 
 	void verifyAuthenticationFailure(int responsecode, WinkClient syncPrivClient) {
 		if(syncPrivClient.isAuthenticationEnabled()) {
-			assertTrue(responsecode == 405);
+			assertTrue(responsecode == 405 || responsecode == 403);
 		} else {
 			assertTrue(responsecode == 401);
 		}
