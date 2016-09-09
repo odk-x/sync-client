@@ -3288,7 +3288,7 @@ public class WinkClientTest extends TestCase {
 //    }
 //  }
   
-  public void testSetUserPermissionsWithValidUser_ExpectPass() {
+  public void testUploadPermissionCSVWithValidUser_ExpectPass() {
     String relativeTestFilePath = "permissions/perm-file.csv";
     String testFile = absolutePathOfTestFiles + relativeTestFilePath;
     String testUserName = "mailto:testerodk@gmail.com";
@@ -3306,6 +3306,9 @@ public class WinkClientTest extends TestCase {
       ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
       
       if (result != null) {
+        
+        assertEquals(rspCode, 200);
+        
         for(int i = 0; i < result.size(); i++) {
           Map<String,Object> userMap = result.get(i);
           if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
@@ -3321,7 +3324,7 @@ public class WinkClientTest extends TestCase {
 
     } catch (Exception e) {
       e.printStackTrace();
-      TestCase.fail("testGetUsersWhenUserExists_ExpectPass: expected pass for getting users");
+      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
     }
   }
 }

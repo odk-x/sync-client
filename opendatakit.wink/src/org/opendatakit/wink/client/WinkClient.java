@@ -426,11 +426,10 @@ public class WinkClient {
   /**
    * Returns a list of users currently on the server in a JSONObject
    * 
-   * @param uri
+   * @param agg_url
    *          the url for the server
-   * @param appId
-   *          identifies the application
-   * @return a JSONObject with the list of tables
+   *          
+   * @return a ArrayList of Map of users
    * 
    * @throws ClientProtocolException
    * @throws IOException
