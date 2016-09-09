@@ -28,13 +28,14 @@ public class SynchronizeUserTest extends AbstractPrivTestBase {
 	 */
 	@Override
 	protected void setUp() throws Exception {
-		super.setUp();
-
+	  
 		syncUserName = "syncpriv";
 		syncUserPassword = "test1234";
 		
 		adminUserName = "tester";
 		adminPassword = "test1234";
+		
+		super.setUp();
 	}
 
 	/*

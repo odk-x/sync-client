@@ -59,6 +59,26 @@ public abstract class AbstractPrivTestBase extends TestCase {
 		URL url = new URL(agg_url);
 		host = url.getHost();
 		version = "2";
+		
+	   WinkClient adminPrivClient = createNewAdminPrivClient();
+	   
+	   // Delete all files on the server 
+	   JSONObject appFiles = adminPrivClient.getManifestForAppLevelFiles(agg_url, appId, version);
+
+	   JSONArray files = appFiles.getJSONArray(WinkClient.FILES_STR);
+	    
+	   for (int j = 0; j < files.size(); j++) {
+	       adminPrivClient.deleteFile(agg_url, appId, files.getJSONObject(j).getString(WinkClient.FILENAME_STR), version);
+	   }
+	    
+	   // Delete all tables on the server 
+	   JSONObject tablesObj = adminPrivClient.getTables(agg_url, appId);
+
+	   JSONArray tables = tablesObj.getJSONArray(WinkClient.TABLES_JSON);
+	    
+	   for (int i = 0; i < tables.size(); i++) {
+	       adminPrivClient.deleteTableDefinition(agg_url, appId, tables.getJSONObject(i).getString(WinkClient.TABLE_ID_JSON), tables.getJSONObject(i).getString(WinkClient.SCHEMA_ETAG_JSON));
+	   }
 	}
 
 	
@@ -1571,7 +1591,7 @@ public abstract class AbstractPrivTestBase extends TestCase {
 
 		String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
 		String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.updated.csv";
-		String csvOutputFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.output.csv";
+		String csvOutputFile = absolutePathOfTestFiles + "downloadedData/geotaggerTest/geotagger.output.csv";
 
 		WinkClient adminPrivClient = null;
 		WinkClient syncPrivClient = null;
@@ -2662,7 +2682,7 @@ public abstract class AbstractPrivTestBase extends TestCase {
 		String relativePathOnServer = "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
 		String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
 
-		String pathToSaveFile = absolutePathOfTestFiles + "downloadBatchInstance";
+		String pathToSaveFile = absolutePathOfTestFiles + "downloadedData/downloadBatchInstance";
 		String pathToVerify = pathToSaveFile + WinkClient.SEPARATOR_STR + relativePathOnServer;
 
 		WinkClient adminPrivClient = null;

@@ -28,14 +28,14 @@ public class SuperUserTest extends AbstractPrivTestBase {
 	 */
 	@Override
 	protected void setUp() throws Exception {
-		super.setUp();
 
 		adminUserName = "tester";
 		adminPassword = "test1234";
 		
 		superUserName = "superpriv";
 		superUserPassword = "test1234";
-
+		
+	   super.setUp();
 	}
 
 	/*

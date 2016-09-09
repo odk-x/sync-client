@@ -2,6 +2,12 @@ package org.opendatakit.wink.client;
 
 public class UriUtils {
   
+  public static String getUserPermissionsUri(String uri) {
+    String usersUri = uri + WinkClient.SEPARATOR_STR 
+        + WinkClient.SSL_STR + WinkClient.SEPARATOR_STR + WinkClient.RESET_USERS_AND_PERMISSIONS;
+    return usersUri;
+  }
+  
   public static String getUsersListUri(String uri) {
     String usersUri = uri + WinkClient.SEPARATOR_STR 
         + WinkClient.USERS_STR + WinkClient.SEPARATOR_STR + WinkClient.LIST_STR;

@@ -25,10 +25,11 @@ public class AnonymousUserTest extends AbstractPrivTestBase {
 	 */
 	@Override
 	protected void setUp() throws Exception {
-		super.setUp();
 	
 		adminUserName = "tester";
 		adminPassword = "test1234";
+		
+	   super.setUp();
 	
 	}
 

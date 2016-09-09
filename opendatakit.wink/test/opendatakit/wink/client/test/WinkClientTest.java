@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.wink.json4j.JSONArray;
@@ -23,6 +24,8 @@ import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome.OutcomeType;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
+import org.opendatakit.wink.client.FileUtils;
+import org.opendatakit.wink.client.UriUtils;
 import org.opendatakit.wink.client.WinkClient;
 
 import junit.framework.TestCase;
@@ -52,11 +55,32 @@ public class WinkClientTest extends TestCase {
     appId = "odktables/default";
     absolutePathOfTestFiles = "testfiles/test/";
     batchSize = 1000;
-    userName = "tester";
-    password = "test1234";
+    userName = "";
+    password = "";
     URL url = new URL(agg_url);
     host = url.getHost();
     version = "2";
+    
+    WinkClient wc = new WinkClient();
+    wc.init(host, userName, password);
+    
+    // Delete all files on the server 
+    JSONObject appFiles = wc.getManifestForAppLevelFiles(agg_url, appId, version);
+
+    JSONArray files = appFiles.getJSONArray(WinkClient.FILES_STR);
+    
+    for (int j = 0; j < files.size(); j++) {
+      wc.deleteFile(agg_url, appId, files.getJSONObject(j).getString(WinkClient.FILENAME_STR), version);
+    }
+    
+    // Delete all tables on the server 
+    JSONObject tablesObj = wc.getTables(agg_url, appId);
+
+    JSONArray tables = tablesObj.getJSONArray(WinkClient.TABLES_JSON);
+    
+    for (int i = 0; i < tables.size(); i++) {
+      wc.deleteTableDefinition(agg_url, appId, tables.getJSONObject(i).getString(WinkClient.TABLE_ID_JSON), tables.getJSONObject(i).getString(WinkClient.SCHEMA_ETAG_JSON));
+    }
   }
 
   /*
@@ -1785,7 +1809,7 @@ public class WinkClientTest extends TestCase {
 
     String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
     String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.updated.csv";
-    String csvOutputFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.output.csv";
+    String csvOutputFile = absolutePathOfTestFiles + "downloadedData/geotaggerTest/geotagger.output.csv";
 
     try {
       WinkClient wc = new WinkClient();
@@ -1902,6 +1926,10 @@ public class WinkClientTest extends TestCase {
     String colType = "string";
     String tableSchemaETag = null;
     String listOfChildElements = "[]";
+    boolean foundFile = false;
+    String relativeTestFilePath = "tables/" + testTableId + "/spaceNeedle_CCLicense_goCardUSA.jpg";
+    String testFile = absolutePathOfTestFiles + testTableId + File.separator + "spaceNeedle_CCLicense_goCardUSA.jpg";
+
 
     // manufacture a rowId for this record... String RowId = "uuid:" +
     UUID.randomUUID().toString();
@@ -1923,6 +1951,20 @@ public class WinkClientTest extends TestCase {
       }
 
       // Add a file for table
+      wc.uploadFile(agg_url, appId, testFile, relativeTestFilePath, version);
+
+      // Make sure that the file is on the server
+      foundFile = checkThatTableLevelFileExistsOnServer(wc, agg_url, appId, testTableId, relativeTestFilePath);
+
+      assertTrue(foundFile);
+
+      // After we are done clean up the file
+      wc.deleteFile(agg_url, appId, relativeTestFilePath, version);
+
+      // Make sure the server no longer has the file
+      foundFile = checkThatTableLevelFileExistsOnServer(wc, agg_url, appId, testTableId, relativeTestFilePath);
+
+      assertFalse(foundFile);
 
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
 
@@ -2801,7 +2843,7 @@ public class WinkClientTest extends TestCase {
     String relativePathOnServer = "assets/img/spaceNeedle_CCLicense_goCardUSA.jpg";
     String wholePathToFile = this.absolutePathOfTestFiles + relativePathOnServer;
     
-    String pathToSaveFile = absolutePathOfTestFiles + "downloadBatchInstance";
+    String pathToSaveFile = absolutePathOfTestFiles + "downloadedData/downloadBatchInstance";
     String pathToVerify = pathToSaveFile + WinkClient.SEPARATOR_STR + relativePathOnServer;
 
     try {
@@ -3147,7 +3189,7 @@ public class WinkClientTest extends TestCase {
 
   public void testPushAllDataToUri_ExpectPass() {
     String dirToGetDataFrom = absolutePathOfTestFiles + "dataToUpload";
-    String dirToPushDataFrom = absolutePathOfTestFiles + "downloadedData";
+    String dirToPushDataFrom = absolutePathOfTestFiles + "downloadedData/pushAllDataToUri";
     String tableSchemaETag = null;
     String testTableId = "geotagger";
     ArrayList<String> filesUploaded;
@@ -3234,14 +3276,9 @@ public class WinkClientTest extends TestCase {
 //      WinkClient wc = new WinkClient();
 //      wc.init(host, userName, password);
 //
-//      ArrayList<String> result = wc.getUsers(agg_url);
-//      
-//      for(String user : result) {
-//    	  if(user != null)
-//    		  System.out.println(user);
-//      }
-//      
-//      //assertNotNull(result);
+//      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
+//     
+//      assertNotNull(result);
 //      
 //      wc.close();
 //
@@ -3250,4 +3287,39 @@ public class WinkClientTest extends TestCase {
 //      TestCase.fail("testGetUsersWhenUserExists_ExpectPass: expected pass for getting users");
 //    }
 //  }
+  
+  public void testSetUserPermissionsWithValidUser_ExpectPass() {
+    String relativeTestFilePath = "permissions/perm-file.csv";
+    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
+    String testUserName = "mailto:testerodk@gmail.com";
+    String userIdStr = "user_id";
+    boolean foundUser = false;
+
+    try {
+      WinkClient wc = new WinkClient();
+      wc.init(host, userName, password);
+
+      wc.uploadPermissionCSV(agg_url, appId, testFile);
+      
+      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
+      
+      if (result != null) {
+        for(int i = 0; i < result.size(); i++) {
+          Map<String,Object> userMap = result.get(i);
+          if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
+            foundUser = true;
+            break;
+          }
+        }
+        
+        assertTrue(foundUser);
+      }
+
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetUsersWhenUserExists_ExpectPass: expected pass for getting users");
+    }
+  }
 }

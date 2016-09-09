@@ -1,7 +1,9 @@
 package org.opendatakit.wink.client;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -46,11 +48,14 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONException;
 import org.apache.wink.json4j.JSONObject;
@@ -64,6 +69,8 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
+import org.apache.http.entity.mime.*;
+import org.apache.http.entity.mime.content.ByteArrayBody;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -194,6 +201,10 @@ public class WinkClient {
   public static final String USERS_STR = "users";
   
   public static final String LIST_STR = "list";
+  
+  public static final String SSL_STR = "ssl";
+  
+  public static final String RESET_USERS_AND_PERMISSIONS = "reset-users-and-permissions";
 
   protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
@@ -356,7 +367,7 @@ public class WinkClient {
   	    }
 
   		return localContext.getRequestConfig().isAuthenticationEnabled();
-  	}
+	  }
   
   /**
    * Init client parameters for authentication
@@ -425,9 +436,9 @@ public class WinkClient {
    * @throws IOException
    * @throws JSONException
    */
-  public ArrayList<String> getUsers(String agg_url) throws ClientProtocolException, 
+  public ArrayList<Map<String,Object>> getUsers(String agg_url) throws ClientProtocolException, 
       IOException, JSONException {
-    ArrayList<String> rolesList = null;
+    ArrayList<Map<String,Object>> rolesList = null;
 
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -3041,6 +3052,117 @@ public class WinkClient {
       downloadBatchForRow(uri, appId, tableId, schemaETag, userRowId, dirToSaveFiles, batchFiles);
     }
   }
+  
+  /**
+   * Upload permissions CSV
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param csvFilePath
+   *          file path of the CSV
+   * @throws IOException 
+   * 
+   */
+  public void uploadPermissionCSV(String uri, String appId, String csvFilePath) throws IOException {
+    
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    if (uri == null || uri.isEmpty()) {
+      throw new IllegalArgumentException("uploadPermissionCSV: uri cannot be null");
+    }
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("uploadPermissionCSV: appId cannot be null");
+    }
+
+    if (csvFilePath == null || csvFilePath.isEmpty()) {
+      throw new IllegalArgumentException("uploadPermissionCSV: csvFilePath cannot be null");
+    }
+    
+    File file = new File(csvFilePath);
+    if (!file.exists()) {
+      System.out.println("uploadPermissionCSV: file " + csvFilePath + " does not exist");
+      throw new IllegalArgumentException("uploadPermissionCSV: csvFilePath cannot be null");
+    }
+    
+    HttpPost request = new HttpPost();
+    HttpResponse response = null;
+    
+    String agg_uri = UriUtils.getUserPermissionsUri(uri);
+
+    System.out.println("uploadPermissionCSV: agg_uri is " + agg_uri);
+
+    request = new HttpPost(agg_uri);
+
+    String boundary = "ref" + UUID.randomUUID();
+    String accessDefFile = "access_def_file";
+
+    NameValuePair params = new BasicNameValuePair("boundary", boundary);
+    ContentType mt = ContentType.create(ContentType.MULTIPART_FORM_DATA.getMimeType(), params);
+
+    MultipartEntityBuilder mpEntBuilder = MultipartEntityBuilder.create();
+
+    mpEntBuilder.setBoundary(boundary);
+
+    // Handle the user permission CSV file
+    String contentType = determineContentType(file.getName());
+
+    FormBodyPartBuilder formPartBodyBld = FormBodyPartBuilder.create();
+    formPartBodyBld.addField("Content-Type", contentType);
+    formPartBodyBld.addField("name", accessDefFile);
+
+    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+    InputStream is = null;
+    try {
+      is = new BufferedInputStream(new FileInputStream(csvFilePath));
+      int length = 1024;
+      // Transfer bytes from in to out
+      byte[] data = new byte[length];
+      int len;
+      while ((len = is.read(data, 0, length)) >= 0) {
+        if (len != 0) {
+          bo.write(data, 0, len);
+        }
+      }
+    } finally {
+      is.close();
+    }
+
+    byte[] content = bo.toByteArray();
+    
+    System.out.println("The content of the file is " + new String(content));
+
+    ByteArrayBody byteArrayBod = new ByteArrayBody(content, accessDefFile);
+    formPartBodyBld.setBody(byteArrayBod);
+    formPartBodyBld.setName(accessDefFile);
+    mpEntBuilder.addPart(formPartBodyBld.build());
+
+    HttpEntity mpFormEntity = mpEntBuilder.build();
+    request.setEntity(mpFormEntity);
+
+    try {
+      response = httpRequestExecute(request, mt.toString(), true);
+
+      System.out.println("uploadPermissionCSV: client response is "
+          + response.getStatusLine().getStatusCode() + ":"
+          + response.getStatusLine().getReasonPhrase());
+
+      if (response.getStatusLine().getStatusCode() < 200
+          || response.getStatusLine().getStatusCode() >= 300) {
+        return;
+      }
+
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+  }
+  
 
   /**
    * Get a batch of file attachments and save them to specified files for a
