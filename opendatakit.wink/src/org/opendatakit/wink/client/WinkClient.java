@@ -3065,7 +3065,9 @@ public class WinkClient {
    * @throws IOException 
    * 
    */
-  public void uploadPermissionCSV(String uri, String appId, String csvFilePath) throws IOException {
+  public int uploadPermissionCSV(String uri, String appId, String csvFilePath) throws IOException {
+    
+    int responseCode = 0;
     
     if (httpClient == null) {
       throw new IllegalStateException("The initialization function must be called");
@@ -3150,10 +3152,12 @@ public class WinkClient {
       System.out.println("uploadPermissionCSV: client response is "
           + response.getStatusLine().getStatusCode() + ":"
           + response.getStatusLine().getReasonPhrase());
+      
+      responseCode = response.getStatusLine().getStatusCode();
 
       if (response.getStatusLine().getStatusCode() < 200
           || response.getStatusLine().getStatusCode() >= 300) {
-        return;
+        return responseCode;
       }
 
     } finally {
@@ -3161,6 +3165,8 @@ public class WinkClient {
         request.releaseConnection();
       }
     }
+    
+    return responseCode;
   }
   
 

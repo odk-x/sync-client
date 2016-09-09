@@ -3299,7 +3299,9 @@ public class WinkClientTest extends TestCase {
       WinkClient wc = new WinkClient();
       wc.init(host, userName, password);
 
-      wc.uploadPermissionCSV(agg_url, appId, testFile);
+      int rspCode = wc.uploadPermissionCSV(agg_url, appId, testFile);
+      
+      System.out.println("rspCode = " + rspCode);
       
       ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
       
