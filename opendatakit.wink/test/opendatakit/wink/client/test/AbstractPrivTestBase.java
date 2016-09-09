@@ -79,6 +79,8 @@ public abstract class AbstractPrivTestBase extends TestCase {
 	   for (int i = 0; i < tables.size(); i++) {
 	       adminPrivClient.deleteTableDefinition(agg_url, appId, tables.getJSONObject(i).getString(WinkClient.TABLE_ID_JSON), tables.getJSONObject(i).getString(WinkClient.SCHEMA_ETAG_JSON));
 	   }
+	   
+	   adminPrivClient.close();
 	}
 
 	
