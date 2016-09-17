@@ -2,10 +2,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opendatakit</groupId>
-  <artifactId>wink</artifactId>
+  <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
-  <name>ODK Wink REST Client</name>
+  <name>ODK Sync REST Client</name>
   <properties>
     <com.fasterxml.jackson.base.version>2.4.1</com.fasterxml.jackson.base.version>
     <com.fasterxml.jackson.core.version>2.4.1.1</com.fasterxml.jackson.core.version>
