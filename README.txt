@@ -1,7 +1,7 @@
 -------------
 Build Instructions
 -------------
-1.  run ant in the opendatakit.wink/dependencies directory
+1.  run ant in the dependencies directory
 2.  mvn clean in the directory where the pom.xml file resides
 3.  mvn install in the directory where the pom.xml file resides
 
