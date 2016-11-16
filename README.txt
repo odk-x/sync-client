@@ -9,14 +9,30 @@ By default, this pom.xml file skips the tests and builds the javadocs.  If you w
 
 <properties>
 	<aggUrl>https://odk-test.appspot.com/odktables</aggUrl>
-	<appId>tables</appId>
+	<appId>default</appId>
 	<absolutePathOfTestFiles>testfiles/test/</absolutePathOfTestFiles>
 	<batchSize>1000</batchSize>
 	<skipTests>false</skipTests>
 </properties>
 
+Alternatively, the project is also set up to pass these parameters during the mvn install.  In the test case above, the command line and arguments would look like this:
+
+  mvn install -DskipTests=false -DaggUrl=https://odk-test.appspot.com/odktables -DappId=default \
+              -DabsolutePathOfTestFiles=testfiles/test  -DbatchSize=1000
+
 The aggUrl and appId properties will be dependent upon the server that you want to 
-run tests against.  
+run tests against.
+
+NOTE: IN ORDER FOR THE TESTS TO PASS, you MUST have the following users (and permission levels)
+set on the aggregate:
+
+    Admin user: tester        pw:test1234
+    Super user: superpriv     pw:test1234
+    Synch user: syncpriv      pw:test1234
+
+Additionally, your anonymous user MUST be set up to be able to synchronize tables.
+
+Failure to set these users properly will result in a ton of 401:Unauthorized responses to the tests.
 
 -------------
 Documentation 
