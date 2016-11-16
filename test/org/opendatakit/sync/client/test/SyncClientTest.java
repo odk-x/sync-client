@@ -44,17 +44,17 @@ public class SyncClientTest extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    //agg_url = System.getProperty("test.aggUrl");
-    //appId = System.getProperty("test.appId");
-    //absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
-    //batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
+    agg_url = System.getProperty("test.aggUrl");
+    appId = System.getProperty("test.appId");
+    absolutePathOfTestFiles = System.getProperty("test.absolutePathOfTestFiles");
+    batchSize = Integer.valueOf(System.getProperty("test.batchSize"));
     
-    agg_url = "";
-    appId = "odktables/default";
-    absolutePathOfTestFiles = "testfiles/test/";
-    batchSize = 1000;
-    userName = "";
-    password = "";
+    //agg_url = "";
+    //appId = "odktables/default";
+    //absolutePathOfTestFiles = "testfiles/test/";
+    //batchSize = 1000;
+    userName = "tester";
+    password = "test1234";
     URL url = new URL(agg_url);
     host = url.getHost();
     version = "2";
