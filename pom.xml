@@ -24,7 +24,7 @@
     <maven.surefire.report.plugin.version>2.16</maven.surefire.report.plugin.version>
     <maven.surefire.plugin.version>2.16</maven.surefire.plugin.version>
     <junit.version>4.11</junit.version>
-    <jacoco.version>0.7.8.201611140741</jacoco.version>
+    <jacoco.version>0.7.7.201606060606</jacoco.version>
     <skipTests>true</skipTests>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
