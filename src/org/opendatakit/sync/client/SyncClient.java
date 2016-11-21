@@ -2027,6 +2027,9 @@ public class SyncClient {
     }
 
     File file = new File(csvFilePath);
+    // Make the necessary directories if they are not already created
+    file.getParentFile().mkdirs();
+
     if (!file.exists()) {
       file.createNewFile();
     }
