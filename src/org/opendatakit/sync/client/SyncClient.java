@@ -3486,6 +3486,103 @@ public class SyncClient {
 
     return obj;
   }
+  
+  /**
+   * Returns a JSONObject of the changed rows that can be found in a table specified
+   * tableId and schemaETag since the dataETag
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dataETag
+   *          identifies a set of changes to the table
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
+   * @return a JSONObject with the row data
+   * 
+   * @throws IOException
+   * @throws JSONException
+   * 
+   */
+  public JSONObject getAllDataChangesSince(String uri, String appId,
+      String tableId, String schemaETag, String dataETag, String cursor,
+      String fetchLimit) throws IOException, JSONException {
+    JSONObject obj = null;
+    boolean useCursor = false;
+    boolean useFetchLimit = false;
+    boolean useDataETag = false;
+
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    HttpGet request = null;
+    try {
+      // RestClient restClient = new RestClient();
+
+      String agg_uri = UriUtils.getTableIdDiffUri(uri, appId, tableId, schemaETag);
+      
+      if (dataETag != null && !dataETag.isEmpty()) {
+        useDataETag = true;
+      }
+      
+      if (cursor != null && !cursor.isEmpty()) {
+        useCursor = true;
+      }
+
+      if (fetchLimit != null && !fetchLimit.isEmpty()) {
+        useFetchLimit = true;
+      }
+
+      
+      if (useCursor || useFetchLimit || useDataETag) {
+        agg_uri = agg_uri + "?";
+      }
+
+      if (useCursor) {
+        agg_uri = agg_uri + CURSOR_QUERY_PARAM + cursor;
+        if (useFetchLimit || useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+
+      if (useFetchLimit) {
+        agg_uri = agg_uri + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
+        if (useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+
+      if (useDataETag) {
+        agg_uri = agg_uri + DATA_ETAG_QUERY_PARAM + dataETag;
+      }
+
+      System.out.println("getAllDataChangesSince: agg uri is " + agg_uri);
+      
+      request = new HttpGet(agg_uri);
+      HttpResponse response = null;
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+
+      obj = convertResponseToJSONObject(response);
+      System.out.println("getAllDataChangesSince: result for " + tableId + " is "
+          + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+
+    return obj;
+  }
 
   /**
    * Returns a JSONObject of the rows that can be found in a table specified
