@@ -29,11 +29,11 @@ public class SuperUserTest extends AbstractPrivTestBase {
 	@Override
 	protected void setUp() throws Exception {
 
-		adminUserName = "tester";
-		adminPassword = "test1234";
+		adminUserName = "tester@mezuricloud.com";
+		adminPassword = "testingTesting0123";
 		
-		superUserName = "superpriv";
-		superUserPassword = "test1234";
+		superUserName = "superpriv@mezuricloud.com";
+		superUserPassword = "testingTesting0123";
 		
 	   super.setUp();
 	}

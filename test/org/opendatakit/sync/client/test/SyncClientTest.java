@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Map;
 import java.util.UUID;
 
 import org.apache.wink.json4j.JSONArray;
@@ -53,8 +52,9 @@ public class SyncClientTest extends TestCase {
     //appId = "odktables/default";
     //absolutePathOfTestFiles = "testfiles/test/";
     //batchSize = 1000;
-    userName = "tester";
-    password = "test1234";
+    
+    userName = "tester@mezuricloud.com";
+    password = "testingTesting0123";
     URL url = new URL(agg_url);
     host = url.getHost();
     version = "2";
@@ -3083,7 +3083,7 @@ public class SyncClientTest extends TestCase {
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
-    String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.edited.csv";
+    String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.groups.csv";
     try {
       SyncClient wc = new SyncClient();
       wc.init(host, userName, password);
@@ -3388,43 +3388,43 @@ public class SyncClientTest extends TestCase {
 //    }
 //  }
   
-  public void testUploadPermissionCSVWithValidUser_ExpectPass() {
-    String relativeTestFilePath = "permissions/perm-file.csv";
-    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
-    String testUserName = "mailto:testerodk@gmail.com";
-    String userIdStr = "user_id";
-    boolean foundUser = false;
-
-    try {
-      SyncClient wc = new SyncClient();
-      wc.init(host, userName, password);
-
-      int rspCode = wc.uploadPermissionCSV(agg_url, appId, testFile);
-      
-      System.out.println("rspCode = " + rspCode);
-      
-      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
-      
-      if (result != null) {
-        
-        assertEquals(rspCode, 200);
-        
-        for(int i = 0; i < result.size(); i++) {
-          Map<String,Object> userMap = result.get(i);
-          if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
-            foundUser = true;
-            break;
-          }
-        }
-        
-        assertTrue(foundUser);
-      }
-
-      wc.close();
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
-    }
-  }
+//  public void testUploadPermissionCSVWithValidUser_ExpectPass() {
+//    String relativeTestFilePath = "permissions/perm-file.csv";
+//    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
+//    String testUserName = "mailto:testerodk@gmail.com";
+//    String userIdStr = "user_id";
+//    boolean foundUser = false;
+//
+//    try {
+//      SyncClient wc = new SyncClient();
+//      wc.init(host, userName, password);
+//
+//      int rspCode = wc.uploadPermissionCSV(agg_url, appId, testFile);
+//      
+//      System.out.println("rspCode = " + rspCode);
+//      
+//      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
+//      
+//      if (result != null) {
+//        
+//        assertEquals(rspCode, 200);
+//        
+//        for(int i = 0; i < result.size(); i++) {
+//          Map<String,Object> userMap = result.get(i);
+//          if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
+//            foundUser = true;
+//            break;
+//          }
+//        }
+//        
+//        assertTrue(foundUser);
+//      }
+//
+//      wc.close();
+//
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
+//    }
+//  }
 }
