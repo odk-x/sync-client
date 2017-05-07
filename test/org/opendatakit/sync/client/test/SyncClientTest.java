@@ -1827,6 +1827,16 @@ public class SyncClientTest extends TestCase {
       wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvOutputFile);
+      
+      InputStream in = new FileInputStream(csvOutputFile);
+      InputStreamReader inputStream = new InputStreamReader(in);
+      RFC4180CsvReader reader = new RFC4180CsvReader(inputStream);
+      int lineCnt = 0;
+      while (reader.readNext() != null) {
+        lineCnt++;
+      }
+    
+      assertEquals(lineCnt, 14);
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);

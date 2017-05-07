@@ -2068,7 +2068,7 @@ public class SyncClient {
       colArray[i++] = obj.getString("column");
     }
 
-    for (int cnt = 0; i < metadataColumns2.length; cnt++) {
+    for (int cnt = 0; cnt < metadataColumns2.length; cnt++) {
       colArray[i++] = metadataColumns2[cnt];
     }
 
