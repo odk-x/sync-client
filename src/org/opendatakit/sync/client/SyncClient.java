@@ -155,7 +155,7 @@ public class SyncClient {
   
   public static final String DEFAULT_ACCESS_JSON = "defaultAccess";
   
-  public static final String OWNER_JSON = "owner";
+  public static final String ROW_OWNER_JSON = "rowOwner";
   
   public static final String GROUP_MODIFY_JSON = "groupModify";
   
@@ -191,7 +191,7 @@ public class SyncClient {
 
   public static final String DEFAULT_ACCESS_ROW_DEF = "_default_access";
 
-  public static final String OWNER_ROW_DEF = "_owner";
+  public static final String ROW_OWNER_ROW_DEF = "_row_owner";
   
   public static final String GROUP_READ_ONLY_ROW_DEF = "_group_read_only";
 
@@ -222,7 +222,7 @@ public class SyncClient {
   protected static final String [] metadataColumns1 = {ID_ROW_DEF, FORM_ID_ROW_DEF, LOCALE_ROW_DEF, 
     SAVEPOINT_TYPE_ROW_DEF, SAVEPOINT_TIMESTAMP_ROW_DEF, SAVEPOINT_CREATOR_ROW_DEF};
   protected static final String[] metadataColumns2 = {ROW_ETAG_ROW_DEF, DEFAULT_ACCESS_ROW_DEF, 
-    OWNER_ROW_DEF, GROUP_READ_ONLY_ROW_DEF, GROUP_MODIFY_ROW_DEF, GROUP_PRIVILEGED_ROW_DEF};
+    ROW_OWNER_ROW_DEF, GROUP_READ_ONLY_ROW_DEF, GROUP_MODIFY_ROW_DEF, GROUP_PRIVILEGED_ROW_DEF};
 
   protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
@@ -2119,7 +2119,7 @@ public class SyncClient {
       JSONObject filterScope = row.getJSONObject(FILTER_SCOPE_JSON);
       
       colArray[i++] = filterScope.isNull(DEFAULT_ACCESS_JSON) ? nullString : filterScope.getString(DEFAULT_ACCESS_JSON);
-      colArray[i++] = filterScope.isNull(OWNER_JSON) ? nullString : filterScope.getString(OWNER_JSON);
+      colArray[i++] = filterScope.isNull(ROW_OWNER_JSON) ? nullString : filterScope.getString(ROW_OWNER_JSON);
       colArray[i++] = filterScope.isNull(GROUP_READ_ONLY_JSON) ? nullString : filterScope.getString(GROUP_READ_ONLY_JSON);
       colArray[i++] = filterScope.isNull(GROUP_MODIFY_JSON) ? nullString : filterScope.getString(GROUP_MODIFY_JSON);
       colArray[i++] = filterScope.isNull(GROUP_PRIVILEGED_JSON) ? nullString : filterScope.getString(GROUP_PRIVILEGED_JSON);
@@ -2587,7 +2587,7 @@ public class SyncClient {
 
         String defAccess = line[numOfCols - 5];
         RowFilterScope.Access defaultAccess = RowFilterScope.Access.FULL;
-        String owner = line[numOfCols - 4];
+        String rowOwner = line[numOfCols - 4];
         String groupReadOnly = line[numOfCols - 3];
         String groupModify = line[numOfCols - 2];
         String groupPrivileged = line[numOfCols - 1];
@@ -2599,7 +2599,7 @@ public class SyncClient {
           defaultAccess = RowFilterScope.Access.valueOf(defAccess);
         }
         
-        RowFilterScope rowFS = new RowFilterScope(defaultAccess, owner, groupReadOnly, groupModify, groupPrivileged);
+        RowFilterScope rowFS = new RowFilterScope(defaultAccess, rowOwner, groupReadOnly, groupModify, groupPrivileged);
         Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], rowFS, dkvl);
 
         rowArrayList.add(row);

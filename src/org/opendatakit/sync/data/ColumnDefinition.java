@@ -440,13 +440,13 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
     jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.DEFAULT_ACCESS);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(TableConstants.OWNER, jsonSchema);
+    model.put(TableConstants.ROW_OWNER, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.OWNER);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.OWNER);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.OWNER);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.ROW_OWNER);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.ROW_OWNER);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.ROW_OWNER);
     //
     jsonSchema = new TreeMap<String, Object>();
     model.put(TableConstants.GROUP_READ_ONLY, jsonSchema);
