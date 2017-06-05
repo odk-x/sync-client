@@ -221,8 +221,8 @@ public class SyncClient {
   
   protected static final String [] metadataColumns1 = {ID_ROW_DEF, FORM_ID_ROW_DEF, LOCALE_ROW_DEF, 
     SAVEPOINT_TYPE_ROW_DEF, SAVEPOINT_TIMESTAMP_ROW_DEF, SAVEPOINT_CREATOR_ROW_DEF};
-  protected static final String[] metadataColumns2 = {ROW_ETAG_ROW_DEF, DEFAULT_ACCESS_ROW_DEF, 
-    ROW_OWNER_ROW_DEF, GROUP_READ_ONLY_ROW_DEF, GROUP_MODIFY_ROW_DEF, GROUP_PRIVILEGED_ROW_DEF};
+  protected static final String[] metadataColumns2 = {DEFAULT_ACCESS_ROW_DEF, GROUP_MODIFY_ROW_DEF, 
+    GROUP_PRIVILEGED_ROW_DEF, GROUP_READ_ONLY_ROW_DEF, ROW_ETAG_ROW_DEF, ROW_OWNER_ROW_DEF};
 
   protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
@@ -2585,13 +2585,12 @@ public class SyncClient {
           dkvl.add(dkv);
         }
 
-        String defAccess = line[numOfCols - 5];
         RowFilterScope.Access defaultAccess = RowFilterScope.Access.FULL;
-        String rowOwner = line[numOfCols - 4];
+        String defAccess = line[numOfCols - 6];
+        String groupModify = line[numOfCols - 5];
+        String groupPrivileged = line[numOfCols - 4];
         String groupReadOnly = line[numOfCols - 3];
-        String groupModify = line[numOfCols - 2];
-        String groupPrivileged = line[numOfCols - 1];
-        
+        String rowOwner = line[numOfCols - 1];
         
         if (defAccess == null) {
           defaultAccess = RowFilterScope.Access.FULL;
