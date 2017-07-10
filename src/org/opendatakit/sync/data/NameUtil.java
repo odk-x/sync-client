@@ -213,7 +213,7 @@ public class NameUtil {
    * entity in the database. Valid names are determined to not begin with a
    * single underscore, not to begin with a digit, and to contain only unicode
    * appropriate word characters.
-   * @param name
+   * @param name for user-defined entity in database
    * @return true if valid else false
    */
   public static boolean isValidUserDefinedDatabaseName(String name) {

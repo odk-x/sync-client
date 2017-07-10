@@ -21,9 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
+import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.sync.data.NameUtil;
-import org.opendatakit.sync.provider.DataTableColumns;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -193,10 +193,10 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    * Construct the rich ColumnDefinition objects for a table from the underlying
    * information in the list of Column objects.
    * 
-   * @param appName
-   * @param tableId
-   * @param columns
-   * @return ArrayList<ColumnDefinition>
+   * @param appName the Aggregate appName
+   * @param tableId the tableId
+   * @param columns the columns to use
+   * @return defns ArrayList of built column definitions
    */
   @SuppressWarnings("unchecked")
   public static final ArrayList<ColumnDefinition> buildColumnDefinitions(String appName, String tableId, List<Column> columns) {
@@ -367,7 +367,7 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    * Convert the ColumnDefinition map to an ordered list of columns for
    * transport layer.
    * 
-   * @param orderedDefns
+   * @param orderedDefns ColumnDefinition map
    * @return ordered list of Column objects
    */
   public static ArrayList<Column> getColumns(ArrayList<ColumnDefinition> orderedDefns) {
@@ -394,104 +394,131 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
     TreeMap<String, Object> jsonSchema;
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.ID, jsonSchema);
+    model.put(TableConstants.ID, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.TRUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.ID);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.ID);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.ID);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.ROW_ETAG, jsonSchema);
+    model.put(TableConstants.ROW_ETAG, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.ROW_ETAG);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.ROW_ETAG);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.ROW_ETAG);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.ROW_ETAG);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.ROW_ETAG);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.ROW_ETAG);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.SYNC_STATE, jsonSchema);
+    model.put(TableConstants.SYNC_STATE, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.TRUE);
     // don't force a default value -- the database layer handles sync state initialization itself.
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.SYNC_STATE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.SYNC_STATE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.SYNC_STATE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.SYNC_STATE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.SYNC_STATE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.SYNC_STATE);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.CONFLICT_TYPE, jsonSchema);
+    model.put(TableConstants.CONFLICT_TYPE, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.integer.name());
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.CONFLICT_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.CONFLICT_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.CONFLICT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.CONFLICT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.CONFLICT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.CONFLICT_TYPE);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.FILTER_TYPE, jsonSchema);
+    model.put(TableConstants.DEFAULT_ACCESS, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.FILTER_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.FILTER_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.FILTER_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.DEFAULT_ACCESS);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.DEFAULT_ACCESS);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.DEFAULT_ACCESS);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.FILTER_VALUE, jsonSchema);
+    model.put(TableConstants.ROW_OWNER, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.FILTER_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.FILTER_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.FILTER_VALUE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.ROW_OWNER);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.ROW_OWNER);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.ROW_OWNER);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.FORM_ID, jsonSchema);
+    model.put(TableConstants.GROUP_READ_ONLY, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.FORM_ID);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.FORM_ID);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.FORM_ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.GROUP_READ_ONLY);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.GROUP_READ_ONLY);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.GROUP_READ_ONLY);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.LOCALE, jsonSchema);
+    model.put(TableConstants.GROUP_MODIFY, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.LOCALE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.LOCALE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.LOCALE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.GROUP_MODIFY);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.GROUP_MODIFY);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.GROUP_MODIFY);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.SAVEPOINT_TYPE, jsonSchema);
+    model.put(TableConstants.GROUP_PRIVILEGED, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.SAVEPOINT_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.SAVEPOINT_TYPE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.SAVEPOINT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.GROUP_PRIVILEGED);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.GROUP_PRIVILEGED);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.GROUP_PRIVILEGED);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.SAVEPOINT_TIMESTAMP, jsonSchema);
+    model.put(TableConstants.FORM_ID, jsonSchema);
+    jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
+    jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.FORM_ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.FORM_ID);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.FORM_ID);
+    //
+    jsonSchema = new TreeMap<String, Object>();
+    model.put(TableConstants.LOCALE, jsonSchema);
+    jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
+    jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.LOCALE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.LOCALE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.LOCALE);
+    //
+    jsonSchema = new TreeMap<String, Object>();
+    model.put(TableConstants.SAVEPOINT_TYPE, jsonSchema);
+    jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
+    jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.SAVEPOINT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.SAVEPOINT_TYPE);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.SAVEPOINT_TYPE);
+    //
+    jsonSchema = new TreeMap<String, Object>();
+    model.put(TableConstants.SAVEPOINT_TIMESTAMP, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.TRUE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.SAVEPOINT_TIMESTAMP);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.SAVEPOINT_TIMESTAMP);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.SAVEPOINT_TIMESTAMP);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.SAVEPOINT_TIMESTAMP);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.SAVEPOINT_TIMESTAMP);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.SAVEPOINT_TIMESTAMP);
     //
     jsonSchema = new TreeMap<String, Object>();
-    model.put(DataTableColumns.SAVEPOINT_CREATOR, jsonSchema);
+    model.put(TableConstants.SAVEPOINT_CREATOR, jsonSchema);
     jsonSchema.put(JSON_SCHEMA_TYPE, ElementDataType.string.name());
     jsonSchema.put(JSON_SCHEMA_IS_NOT_NULLABLE, Boolean.FALSE);
     jsonSchema.put(JSON_SCHEMA_ELEMENT_SET, JSON_SCHEMA_INSTANCE_METADATA_VALUE);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, DataTableColumns.SAVEPOINT_CREATOR);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, DataTableColumns.SAVEPOINT_CREATOR);
-    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, DataTableColumns.SAVEPOINT_CREATOR);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_KEY, TableConstants.SAVEPOINT_CREATOR);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_NAME, TableConstants.SAVEPOINT_CREATOR);
+    jsonSchema.put(JSON_SCHEMA_ELEMENT_PATH, TableConstants.SAVEPOINT_CREATOR);
 
     return model;
   }

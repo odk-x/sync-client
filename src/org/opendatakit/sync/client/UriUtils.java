@@ -52,6 +52,12 @@ public class UriUtils {
     return tableIdRefUri;
   }
   
+  public static String getTableIdDiffUri(String uri, String appId, String tableId, String schemaETag) {
+    String tableIdDiffUri = getTableIdRefUri(uri, appId, tableId, schemaETag) 
+        + SyncClient.SEPARATOR_STR + "diff";
+    return tableIdDiffUri;
+  }
+  
   public static String getTableIdRowsUri(String uri, String appId, String tableId, String schemaETag) {
     String tableIdRowsUri = getTableIdRefUri(uri, appId, tableId, schemaETag) 
         + SyncClient.SEPARATOR_STR + SyncClient.ROWS_STR;

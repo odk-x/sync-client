@@ -29,11 +29,11 @@ public class SynchronizeUserTest extends AbstractPrivTestBase {
 	@Override
 	protected void setUp() throws Exception {
 	  
-		syncUserName = "syncpriv";
-		syncUserPassword = "test1234";
+		syncUserName = "syncpriv@mezuricloud.com";
+		syncUserPassword = "testingTesting0123";
 		
-		adminUserName = "tester";
-		adminPassword = "test1234";
+		adminUserName = "tester@mezuricloud.com";
+		adminPassword = "testingTesting0123";
 		
 		super.setUp();
 	}

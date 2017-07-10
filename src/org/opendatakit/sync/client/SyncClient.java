@@ -152,6 +152,16 @@ public class SyncClient {
   public static final String ROWS_STR_JSON = "rows";
 
   public static final String FILTER_SCOPE_JSON = "filterScope";
+  
+  public static final String DEFAULT_ACCESS_JSON = "defaultAccess";
+  
+  public static final String ROW_OWNER_JSON = "rowOwner";
+  
+  public static final String GROUP_MODIFY_JSON = "groupModify";
+  
+  public static final String GROUP_PRIVILEGED_JSON = "groupPrivileged";
+  
+  public static final String GROUP_READ_ONLY_JSON = "groupReadOnly";
 
   public static final String TABLE_ID_JSON = "tableId";
 
@@ -179,9 +189,15 @@ public class SyncClient {
 
   public static final String ROW_ETAG_ROW_DEF = "_row_etag";
 
-  public static final String FILTER_TYPE_ROW_DEF = "_filter_type";
+  public static final String DEFAULT_ACCESS_ROW_DEF = "_default_access";
 
-  public static final String FILTER_VALUE_ROW_DEF = "_filter_value";
+  public static final String ROW_OWNER_ROW_DEF = "_row_owner";
+  
+  public static final String GROUP_READ_ONLY_ROW_DEF = "_group_read_only";
+
+  public static final String GROUP_MODIFY_ROW_DEF = "_group_modify";
+  
+  public static final String GROUP_PRIVILEGED_ROW_DEF = "_group_privileged";
 
   public static final String ORDERED_COLUMNS_DEF = "orderedColumns";
 
@@ -202,6 +218,11 @@ public class SyncClient {
   public static final String SSL_STR = "ssl";
   
   public static final String RESET_USERS_AND_PERMISSIONS = "reset-users-and-permissions";
+  
+  protected static final String [] metadataColumns1 = {ID_ROW_DEF, FORM_ID_ROW_DEF, LOCALE_ROW_DEF, 
+    SAVEPOINT_TYPE_ROW_DEF, SAVEPOINT_TIMESTAMP_ROW_DEF, SAVEPOINT_CREATOR_ROW_DEF};
+  protected static final String[] metadataColumns2 = {DEFAULT_ACCESS_ROW_DEF, GROUP_MODIFY_ROW_DEF, 
+    GROUP_PRIVILEGED_ROW_DEF, GROUP_READ_ONLY_ROW_DEF, ROW_ETAG_ROW_DEF, ROW_OWNER_ROW_DEF};
 
   protected static final int DEFAULT_BOUNDARY_BUFSIZE = 4096;
 
@@ -297,7 +318,7 @@ public class SyncClient {
     
     credsProvider = new BasicCredentialsProvider();
 
-    AuthScope a = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
+    AuthScope a = new AuthScope(host, -1, null, AuthSchemes.BASIC);
     Credentials c = new UsernamePasswordCredentials(userName, password);
     credsProvider.setCredentials(a, c);
 
@@ -308,7 +329,7 @@ public class SyncClient {
 
     // if possible, bias toward digest auth (may not be in 4.0 beta 2)
     List<String> targetPreferredAuthSchemes = new ArrayList<String>();
-    targetPreferredAuthSchemes.add(AuthSchemes.DIGEST);
+    targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
 
     RequestConfig requestConfig = RequestConfig
         .copy(RequestConfig.DEFAULT)
@@ -426,9 +447,9 @@ public class SyncClient {
    *          
    * @return a ArrayList of Map of users
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public ArrayList<Map<String,Object>> getUsers(String agg_url) throws ClientProtocolException, 
       IOException, JSONException {
@@ -521,10 +542,11 @@ public class SyncClient {
    *          the directory in which the data will be saved
    * @param version
    *          ODK version code, 1 or 2
-   * @throws ClientProtocolException
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @throws JSONException
+   *          
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void getAllDataFromUri(String uri, String appId, String dirToSaveDataTo, String version)
       throws ClientProtocolException, FileNotFoundException, IOException, JSONException {
@@ -627,11 +649,12 @@ public class SyncClient {
    *          the directory that has the data to push to the server
    * @param version
    *          ODK version code, 1 or 2
-   * @throws ClientProtocolException
-   * @throws DataFormatException
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @throws JSONException
+   * 
+   * @throws DataFormatException due to CSV file having improper format
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void pushAllDataToUri(String uri, String appId, String dirToGetDataFrom, String version)
       throws ClientProtocolException, DataFormatException, FileNotFoundException, IOException,
@@ -737,9 +760,9 @@ public class SyncClient {
    *          identifies an instance of the table
    * @param dirToSaveDataTo
    *          the directory in which the data will be saved
-   * @throws IOException
-   * @throws JSONException
-   * 
+   *          
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void getAllTableInstanceFilesFromUri(String uri, String appId, String tableId,
       String schemaETag, String dirToSaveDataTo) throws IOException, JSONException {
@@ -797,10 +820,11 @@ public class SyncClient {
    *          the directory in which the data will be saved
    * @param version
    *          ODK version code, 1 or 2
-   * @throws ClientProtocolException
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @throws JSONException
+   * 
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void getAllTableLevelFilesFromUri(String uri, String appId, String tableId,
       String dirToSaveDataTo, String version) throws ClientProtocolException,
@@ -831,10 +855,11 @@ public class SyncClient {
    *          the directory in which the data will be saved
    * @param version
    *          ODK version code, 1 or 2
-   * @throws ClientProtocolException
-   * @throws FileNotFoundException
-   * @throws IOExceptionJSONException
-   * @throws JSONException
+   *          
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void getAllAppLevelFilesFromUri(String uri, String appId, String dirToSaveDataTo,
       String version) throws ClientProtocolException, FileNotFoundException, IOException,
@@ -865,9 +890,10 @@ public class SyncClient {
    * @param version
    *          ODK version code, 1 or 2
    * @return JSONObject of the list of app level files
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
+   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getManifestForAppLevelFiles(String uri, String appId, String version)
       throws ClientProtocolException, IOException, JSONException {
@@ -937,12 +963,10 @@ public class SyncClient {
    *          the relative path on the server where the file will be stored
    * @param version
    *          ODK version code, 1 or 2
-   * @throws Exception
-   *           any exception encountered is thrown to the caller
    * @return Http response status code
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
    */
   public int uploadFile(String uri, String appId, String wholePathToFile,
       String relativePathOnServer, String version) throws ClientProtocolException, IOException {
@@ -1026,9 +1050,9 @@ public class SyncClient {
    * 
    * @return Http response status code
    * 
-   * @throws ClientProtocolException
-   * @throws FileNotFoundException
-   * @throws IOException
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
    */
   public int downloadFile(String uri, String appId, String pathToSaveFile,
       String relativePathOnServer, String version) throws ClientProtocolException,
@@ -1106,9 +1130,8 @@ public class SyncClient {
    *          
    * @return HTTP response status code
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
    */
   public int deleteFile(String uri, String appId, String relativePathOnServer, String version)
       throws ClientProtocolException, IOException {
@@ -1156,10 +1179,9 @@ public class SyncClient {
    *          identifies the application
    * @return a JSONObject with the list of tables
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getTables(String uri, String appId) throws ClientProtocolException,
       IOException, JSONException {
@@ -1222,10 +1244,9 @@ public class SyncClient {
    *          the table identifier or name
    * @return a JSONObject with the representation of the table
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getTable(String uri, String appId, String tableId)
       throws ClientProtocolException, IOException, JSONException {
@@ -1273,9 +1294,9 @@ public class SyncClient {
    *          the table identifier or name
    * @return a JSONObject with the representation of the table
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    * 
    */
   public String getTableDataETag(String uri, String appId, String tableId)
@@ -1308,10 +1329,9 @@ public class SyncClient {
    *          table
    * @return a JSONObject with the representation of the newly created table
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject createTable(String uri, String appId, String tableId, String schemaETag,
       ArrayList<Column> columns) throws ClientProtocolException, IOException, JSONException {
@@ -1397,10 +1417,9 @@ public class SyncClient {
    *          definition
    * @return a JSONObject with the representation of the newly created table
    * 
-   * @throws ClientProtocolException 
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject createTableWithJSON(String uri, String appId, String tableId,
       String schemaETag, String jsonTableCreationObject) throws ClientProtocolException,
@@ -1522,11 +1541,10 @@ public class SyncClient {
    *          file path to the definition.csv file
    * @return a JSONObject with the representation of the newly created table
    * 
-   * @throws DataFormatException
-   * @throws FileNotFoundException
-   * @throws IOException,
-   * @throws JSONException
-   * 
+   * @throws DataFormatException due to CSV file having improper format
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject createTableWithCSV(String uri, String appId, String tableId, String schemaETag,
       String csvFilePath) throws DataFormatException, FileNotFoundException, IOException,
@@ -1561,11 +1579,10 @@ public class SyncClient {
    * @param csvInputStream
    *          input stream for a table definition csv file
    * @return a JSONObject with the representation of the newly created table
-   * 
-   * @throws DataFormatException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   *  
+   * @throws DataFormatException due to CSV file having improper format
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject createTableWithCSVInputStream(String uri, String appId, String tableId,
       String schemaETag, InputStream csvInputStream) throws DataFormatException, IOException,
@@ -1636,10 +1653,9 @@ public class SyncClient {
    * @param csvFilePath
    *          file path in which to save the table definition
    *          
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void writeTableDefinitionToCSV(String uri, String appId, String tableId,
       String schemaETag, String csvFilePath) throws ClientProtocolException, IOException,
@@ -1696,10 +1712,9 @@ public class SyncClient {
    *          identifies an instance of the table
    * @return a JSONObject with the table definition
    *          
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   *            
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors       
    */
   public JSONObject getTableDefinition(String uri, String appId, String tableId, String schemaETag)
       throws ClientProtocolException, IOException, JSONException {
@@ -1745,9 +1760,8 @@ public class SyncClient {
    *          
    * @return Http response status code
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
    */
   public int deleteTableDefinition(String uri, String appId, String tableId, String schemaETag)
       throws ClientProtocolException, IOException {
@@ -1792,10 +1806,9 @@ public class SyncClient {
    *          ODK version code, 1 or 2
    * @return a JSONObject with the list of table level files
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getManifestForTableId(String uri, String appId, String tableId, String version)
       throws ClientProtocolException, IOException, JSONException {
@@ -1843,10 +1856,9 @@ public class SyncClient {
    *          rows
    * @return a JSONObject with the row data
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getRowsSince(String uri, String appId, String tableId, String schemaETag,
       String cursor, String fetchLimit, String dataETag) throws ClientProtocolException,
@@ -2006,9 +2018,8 @@ public class SyncClient {
    * @param csvFilePath
    *          the csv file path in which to write the row data
    *          
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void writeRowDataToCSV(String uri, String appId, String tableId, String schemaETag,
       String csvFilePath) throws IOException, JSONException {
@@ -2029,7 +2040,7 @@ public class SyncClient {
     File file = new File(csvFilePath);
     // Make the necessary directories if they are not already created
     file.getParentFile().mkdirs();
-
+    
     if (!file.exists()) {
       file.createNewFile();
     }
@@ -2042,25 +2053,24 @@ public class SyncClient {
 
     JSONObject repRow = rows.getJSONObject(0);
     JSONArray orderedColumnsRep = repRow.getJSONArray(ORDERED_COLUMNS_DEF);
-    int numberOfColsToMake = 9 + orderedColumnsRep.size();
+
+    int numberOfColsToMake = orderedColumnsRep.size() + metadataColumns1.length + metadataColumns2.length;
     String[] colArray = new String[numberOfColsToMake];
 
     int i = 0;
-    colArray[i++] = ID_ROW_DEF;
-    colArray[i++] = FORM_ID_ROW_DEF;
-    colArray[i++] = LOCALE_ROW_DEF;
-    colArray[i++] = SAVEPOINT_TYPE_ROW_DEF;
-    colArray[i++] = SAVEPOINT_TIMESTAMP_ROW_DEF;
-    colArray[i++] = SAVEPOINT_CREATOR_ROW_DEF;
-
+    
+    for (int cnt = 0; cnt < metadataColumns1.length; cnt++) {
+      colArray[i++] = metadataColumns1[cnt];
+    }
+    
     for (int j = 0; j < orderedColumnsRep.size(); j++) {
       JSONObject obj = orderedColumnsRep.getJSONObject(j);
       colArray[i++] = obj.getString("column");
     }
 
-    colArray[i++] = ROW_ETAG_ROW_DEF;
-    colArray[i++] = FILTER_TYPE_ROW_DEF;
-    colArray[i++] = FILTER_VALUE_ROW_DEF;
+    for (int cnt = 0; cnt < metadataColumns2.length; cnt++) {
+      colArray[i++] = metadataColumns2[cnt];
+    }
 
     writer.writeNext(colArray);
 
@@ -2087,20 +2097,11 @@ public class SyncClient {
       i = 0;
       JSONObject row = rows.getJSONObject(k);
       colArray[i++] = row.getString(ID_JSON);
-      String formId = nullString;
-      if (!row.isNull(FORM_ID_JSON)) {
-        formId = row.getString(FORM_ID_JSON);
-      }
-      colArray[i++] = formId;
+      colArray[i++] = row.isNull(FORM_ID_JSON) ? nullString : row.getString(FORM_ID_JSON);
       colArray[i++] = row.getString(LOCALE_JSON);
       colArray[i++] = row.getString(SAVEPOINT_TYPE_JSON);
       colArray[i++] = row.getString(SAVEPOINT_TIMESTAMP_JSON);
-
-      String creator = nullString;
-      if (!row.isNull(SAVEPOINT_CREATOR_JSON)) {
-        creator = row.getString(SAVEPOINT_CREATOR_JSON);
-      }
-      colArray[i++] = creator;
+      colArray[i++] = row.isNull(SAVEPOINT_CREATOR_JSON) ? nullString : row.getString(SAVEPOINT_CREATOR_JSON);
 
       JSONArray rowsOrderedCols = row.getJSONArray(ORDERED_COLUMNS_DEF);
 
@@ -2113,14 +2114,15 @@ public class SyncClient {
         }
       }
 
-      colArray[i++] = nullString;
+      colArray[i++] = row.isNull(ROW_ETAG_JSON) ? nullString : row.getString(ROW_ETAG_JSON);
+      
       JSONObject filterScope = row.getJSONObject(FILTER_SCOPE_JSON);
-      colArray[i++] = filterScope.getString(TYPE_STR);
-      if (filterScope.isNull("value")) {
-        colArray[i++] = nullString;
-      } else {
-        colArray[i++] = filterScope.getString("value");
-      }
+      
+      colArray[i++] = filterScope.isNull(DEFAULT_ACCESS_JSON) ? nullString : filterScope.getString(DEFAULT_ACCESS_JSON);
+      colArray[i++] = filterScope.isNull(ROW_OWNER_JSON) ? nullString : filterScope.getString(ROW_OWNER_JSON);
+      colArray[i++] = filterScope.isNull(GROUP_READ_ONLY_JSON) ? nullString : filterScope.getString(GROUP_READ_ONLY_JSON);
+      colArray[i++] = filterScope.isNull(GROUP_MODIFY_JSON) ? nullString : filterScope.getString(GROUP_MODIFY_JSON);
+      colArray[i++] = filterScope.isNull(GROUP_PRIVILEGED_JSON) ? nullString : filterScope.getString(GROUP_PRIVILEGED_JSON);
 
       writer.writeNext(colArray);
     }
@@ -2141,8 +2143,10 @@ public class SyncClient {
    * @param rowId
    *          the unique id for a row in the table
    * @return a JSONObject that contains the row data
-   * @throws Exception
-   *           any exception encountered is thrown to the caller
+   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors     
    */
   public JSONObject getRow(String uri, String appId, String tableId, String schemaETag, String rowId)
       throws ClientProtocolException, IOException, JSONException {
@@ -2209,10 +2213,9 @@ public class SyncClient {
    *          the unique identifier for a row in the table
    * @return a JSONObject with the attachments for the row
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject getManifestForRow(String uri, String appId, String tableId, String schemaETag,
       String rowId) throws ClientProtocolException, IOException, JSONException {
@@ -2262,10 +2265,9 @@ public class SyncClient {
    *          used to set the batch size of rows sent to the server - if 0 is
    *          passed in, the default of 500 is used
    *          
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void createRowsUsingBulkUpload(String uri, String appId, String tableId,
       String schemaETag, ArrayList<Row> rowArrayList, int batchSize)
@@ -2357,9 +2359,8 @@ public class SyncClient {
    * @param batchSize
    *          the number of rows that will be uploaded to the server at one time
    *          
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void createRowsUsingJSONBulkUpload(String uri, String appId, String tableId,
       String schemaETag, String jsonRows, int batchSize) throws IOException, JSONException {
@@ -2426,7 +2427,8 @@ public class SyncClient {
 
       if (rowObj.containsKey(FILTER_SCOPE_JSON)) {
         JSONObject filterObj = rowObj.getJSONObject(FILTER_SCOPE_JSON);
-        defaultScope = RowFilterScope.asRowFilter(filterObj.getString(TYPE_STR), filterObj.getString("value"));
+        // TODO: CAL: Fix this for real
+        defaultScope = RowFilterScope.asRowFilter(filterObj.getString(TYPE_STR), filterObj.getString("value"), "DEFAULT", null, null);
       }
 
       Row row = Row.forInsert(rowId, formId, locale, savepointType, savepointTimestamp,
@@ -2466,11 +2468,10 @@ public class SyncClient {
    * @param batchSize
    *          the number of rows that will be uploaded to the server at one time
    *          
-   * @throws FileNotFoundException
-   * @throws IOException
-   * @throws DataFormatException
- * @throws JSONException 
-   * 
+   * @throws DataFormatException due to CSV file having improper format
+   * @throws FileNotFoundException due to accessing non-existent files
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void createRowsUsingCSVBulkUpload(String uri, String appId, String tableId,
       String schemaETag, String csvFilePath, int batchSize) throws FileNotFoundException,
@@ -2507,10 +2508,9 @@ public class SyncClient {
    * @param batchSize
    *          the number of rows that will be uploaded to the server at one time
    *          
-   * @throws IOException 
-   * @throws DataFormatException
- * @throws JSONException 
-   * 
+   * @throws DataFormatException due to CSV file having improper format
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void createRowsUsingCSVInputStreamBulkUpload(String uri, String appId, String tableId,
       String schemaETag, InputStream csvInputStream, int batchSize) throws IOException,
@@ -2550,21 +2550,22 @@ public class SyncClient {
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[0].equals(ID_ROW_DEF) || !firstLine[1].equals(FORM_ID_ROW_DEF)
-        || !firstLine[2].equals(LOCALE_ROW_DEF) || !firstLine[3].equals(SAVEPOINT_TYPE_ROW_DEF)
-        || !firstLine[4].equals(SAVEPOINT_TIMESTAMP_ROW_DEF)
-        || !firstLine[5].equals(SAVEPOINT_CREATOR_ROW_DEF)) {
-      throw new DataFormatException(
-          "The csv file used to create rows does not have the correct columns in the first row");
+    for (int i = 0; i < metadataColumns1.length; i++) {
+      if (!firstLine[i].equals(metadataColumns1[i])) {
+        throw new DataFormatException(
+            "The csv file used to create rows does not have the correct columns at the beginning of the first row");
+      }
     }
+
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[numOfCols - 3].equals(ROW_ETAG_ROW_DEF)
-        || !firstLine[numOfCols - 2].equals(FILTER_TYPE_ROW_DEF)
-        || !firstLine[numOfCols - 1].equals(FILTER_VALUE_ROW_DEF)) {
-      throw new DataFormatException(
-          "The csv file used to create rows does not have the correct columns in the first row");
+    for (int i = 0; i < metadataColumns2.length; i++) {
+      int firstLineIdx = numOfCols - (metadataColumns2.length - i);
+      if(!firstLine[firstLineIdx].equals(metadataColumns2[i])) {
+        throw new DataFormatException(
+            "The csv file used to create rows does not have the correct columns at the end of the first row");
+      }
     }
 
       String[] line;
@@ -2579,12 +2580,26 @@ public class SyncClient {
 
         ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
 
-        for (int i = 6; i < numOfCols - 3; i++) {
+        for (int i = 6; i < numOfCols - 6; i++) {
           DataKeyValue dkv = new DataKeyValue(firstLine[i], line[i]);
           dkvl.add(dkv);
         }
 
-        Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], null, dkvl);
+        RowFilterScope.Access defaultAccess = RowFilterScope.Access.FULL;
+        String defAccess = line[numOfCols - 6];
+        String groupModify = line[numOfCols - 5];
+        String groupPrivileged = line[numOfCols - 4];
+        String groupReadOnly = line[numOfCols - 3];
+        String rowOwner = line[numOfCols - 1];
+        
+        if (defAccess == null) {
+          defaultAccess = RowFilterScope.Access.FULL;
+        } else {
+          defaultAccess = RowFilterScope.Access.valueOf(defAccess);
+        }
+        
+        RowFilterScope rowFS = new RowFilterScope(defaultAccess, rowOwner, groupReadOnly, groupModify, groupPrivileged);
+        Row row = Row.forInsert(line[0], line[1], line[2], line[3], line[4], line[5], rowFS, dkvl);
 
         rowArrayList.add(row);
 
@@ -2676,10 +2691,9 @@ public class SyncClient {
    *          used to set the batch size of rows sent to the server - if 0 is
    *          passed in, the default of 500 is used
    *          
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void updateRowsUsingBulkUpload(String uri, String appId, String tableId,
       String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize)
@@ -2747,10 +2761,9 @@ public class SyncClient {
    *          used to set the batch size of rows sent to the server - if 0 is
    *          passed in, the default of 500 is used
    *          
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public void deleteRowsUsingBulkUpload(String uri, String appId, String tableId,
       String schemaETag, String dataETagVal, ArrayList<Row> rowArrayList, int batchSize)
@@ -2819,9 +2832,9 @@ public class SyncClient {
    *          an ArrayList of rows to create
    * @return a RowOutcomeList with the row outcome and row data if applicable
    * 
-   * @throws ClientProtocolException
-   * @throws IOException
-   * @throws JSONException
+   * @throws ClientProtocolException due to http errors
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    * 
    */
   public RowOutcomeList alterRowsUsingSingleBatch(String uri, String appId, String tableId,
@@ -3059,8 +3072,10 @@ public class SyncClient {
    *          identifies the application
    * @param csvFilePath
    *          file path of the CSV
-   * @throws IOException 
-   * 
+   * @return responseCode
+   *          the http response code          
+   *          
+   * @throws IOException due to file errors
    */
   public int uploadPermissionCSV(String uri, String appId, String csvFilePath) throws IOException {
     
@@ -3430,9 +3445,8 @@ public class SyncClient {
    *          query parameter that defines the number of rows to return
    * @return a JSONObject with the row data
    * 
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject queryRowsInTimeRangeWithLastUpdateDate(String uri, String appId,
       String tableId, String schemaETag, String startTime, String endTime, String cursor,
@@ -3486,6 +3500,102 @@ public class SyncClient {
 
     return obj;
   }
+  
+  /**
+   * Returns a JSONObject of the changed rows that can be found in a table specified
+   * tableId and schemaETag since the dataETag
+   * 
+   * @param uri
+   *          the url for the server
+   * @param appId
+   *          identifies the application
+   * @param tableId
+   *          the table identifier or name
+   * @param schemaETag
+   *          identifies an instance of the table
+   * @param dataETag
+   *          identifies a set of changes to the table
+   * @param cursor
+   *          query parameter that identifies the point at which to resume the
+   *          query
+   * @param fetchLimit
+   *          query parameter that defines the number of rows to return
+   * @return a JSONObject with the row data
+   * 
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
+   */
+  public JSONObject getAllDataChangesSince(String uri, String appId,
+      String tableId, String schemaETag, String dataETag, String cursor,
+      String fetchLimit) throws IOException, JSONException {
+    JSONObject obj = null;
+    boolean useCursor = false;
+    boolean useFetchLimit = false;
+    boolean useDataETag = false;
+
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    HttpGet request = null;
+    try {
+      // RestClient restClient = new RestClient();
+
+      String agg_uri = UriUtils.getTableIdDiffUri(uri, appId, tableId, schemaETag);
+      
+      if (dataETag != null && !dataETag.isEmpty()) {
+        useDataETag = true;
+      }
+      
+      if (cursor != null && !cursor.isEmpty()) {
+        useCursor = true;
+      }
+
+      if (fetchLimit != null && !fetchLimit.isEmpty()) {
+        useFetchLimit = true;
+      }
+
+      
+      if (useCursor || useFetchLimit || useDataETag) {
+        agg_uri = agg_uri + "?";
+      }
+
+      if (useCursor) {
+        agg_uri = agg_uri + CURSOR_QUERY_PARAM + cursor;
+        if (useFetchLimit || useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+
+      if (useFetchLimit) {
+        agg_uri = agg_uri + FETCH_LIMIT_QUERY_PARAM + fetchLimit;
+        if (useDataETag) {
+          agg_uri = agg_uri + "&";
+        }
+      }
+
+      if (useDataETag) {
+        agg_uri = agg_uri + DATA_ETAG_QUERY_PARAM + dataETag;
+      }
+
+      System.out.println("getAllDataChangesSince: agg uri is " + agg_uri);
+      
+      request = new HttpGet(agg_uri);
+      HttpResponse response = null;
+      
+      response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+
+      obj = convertResponseToJSONObject(response);
+      System.out.println("getAllDataChangesSince: result for " + tableId + " is "
+          + obj.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+
+    return obj;
+  }
 
   /**
    * Returns a JSONObject of the rows that can be found in a table specified
@@ -3515,9 +3625,8 @@ public class SyncClient {
    *          query parameter that defines the number of rows to return
    * @return a JSONObject with the row data
    * 
-   * @throws IOException
-   * @throws JSONException
-   * 
+   * @throws IOException due to file errors
+   * @throws JSONException due to JSON errors
    */
   public JSONObject queryRowsInTimeRangeWithSavepointTimestamp(String uri, String appId,
       String tableId, String schemaETag, String startTime, String endTime, String cursor,

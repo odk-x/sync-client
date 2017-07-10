@@ -26,8 +26,8 @@ public class AnonymousUserTest extends AbstractPrivTestBase {
 	@Override
 	protected void setUp() throws Exception {
 	
-		adminUserName = "tester";
-		adminPassword = "test1234";
+		adminUserName = "tester@mezuricloud.com";
+		adminPassword = "testingTesting0123";
 		
 	   super.setUp();
 	

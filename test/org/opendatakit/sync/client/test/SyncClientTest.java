@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Map;
 import java.util.UUID;
 
 import org.apache.wink.json4j.JSONArray;
@@ -53,8 +52,9 @@ public class SyncClientTest extends TestCase {
     //appId = "odktables/default";
     //absolutePathOfTestFiles = "testfiles/test/";
     //batchSize = 1000;
-    userName = "tester";
-    password = "test1234";
+    
+    userName = "tester@mezuricloud.com";
+    password = "testingTesting0123";
     URL url = new URL(agg_url);
     host = url.getHost();
     version = "2";
@@ -1827,6 +1827,16 @@ public class SyncClientTest extends TestCase {
       wc.createRowsUsingCSVBulkUpload(agg_url, appId, testTableId, tableSchemaETag, csvDataFile, 0);
 
       wc.writeRowDataToCSV(agg_url, appId, testTableId, tableSchemaETag, csvOutputFile);
+      
+      InputStream in = new FileInputStream(csvOutputFile);
+      InputStreamReader inputStream = new InputStreamReader(in);
+      RFC4180CsvReader reader = new RFC4180CsvReader(inputStream);
+      int lineCnt = 0;
+      while (reader.readNext() != null) {
+        lineCnt++;
+      }
+    
+      assertEquals(lineCnt, 14);
 
       // Now delete the table
       wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
@@ -2606,6 +2616,97 @@ public class SyncClientTest extends TestCase {
   }
   
   /*
+   * test query in time range with last update date 
+   */
+  public void testGetAllDataChangesSince_ExpectPass() {
+    String testTableId = "test70";
+    String colName = "seq_num";
+    String colKey = "seq_num";
+    String colType = "string";
+
+    String testTableSchemaETag = "createRowsForGetAllDataChangesSinceTest";
+    String tableSchemaETag = null;
+    String listOfChildElements = "[]";
+
+    
+    int sizeOfSeqTable = 50;
+
+    try {
+      SyncClient wc = new SyncClient();
+      wc.init(host, userName, password);
+      
+      ArrayList<Column> columns = new ArrayList<Column>();
+
+      columns.add(new Column(colKey, colName, colType, listOfChildElements));
+
+      JSONObject result = wc.createTable(agg_url, appId, testTableId, testTableSchemaETag, columns);
+
+      if (result.containsKey("tableId")) {
+        tableSchemaETag = result.getString("schemaETag");
+      }
+
+      ArrayList<Row> rowList = new ArrayList<Row>();
+      for (int i = 0; i < sizeOfSeqTable; i++) {
+        DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
+        ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+        dkvl.add(dkv);
+        String RowId = "uuid:" + UUID.randomUUID().toString();
+        Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+        rowList.add(row);
+      }
+
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, rowList, 0);
+
+      JSONObject res = wc.getAllDataChangesSince(agg_url, appId, testTableId, tableSchemaETag, null, null, null);
+      
+      String dETag = res.getString("dataETag");
+      
+      // Add more rows
+      int newSeqNumbers = 100;
+      ArrayList<Row> newRowList = new ArrayList<Row>();
+      for (int i = sizeOfSeqTable; i < newSeqNumbers; i++) {
+        DataKeyValue dkv = new DataKeyValue(colName, Integer.toString(i));
+        ArrayList<DataKeyValue> dkvl = new ArrayList<DataKeyValue>();
+        dkvl.add(dkv);
+        String RowId = "uuid:" + UUID.randomUUID().toString();
+        Row row = Row.forInsert(RowId, null, null, null, null, null, null, dkvl);
+        newRowList.add(row);
+      }
+      
+      wc.createRowsUsingBulkUpload(agg_url, appId, testTableId, tableSchemaETag, newRowList, 0);
+
+      JSONObject res2 = wc.getAllDataChangesSince(agg_url, appId, testTableId, tableSchemaETag, dETag, null, null);
+
+      if (res2.containsKey("rows")) {
+        JSONArray rowsObj = res2.getJSONArray("rows");
+        assertEquals(rowsObj.size(), newSeqNumbers - sizeOfSeqTable);
+        
+        for (int i = 0; i < rowsObj.size(); i++) {
+          JSONObject row = rowsObj.getJSONObject(i);
+          if (row.has(SyncClient.ORDERED_COLUMNS_DEF)) {
+            JSONArray ordCols = row.getJSONArray(SyncClient.ORDERED_COLUMNS_DEF);
+            assertEquals(1, ordCols.size());
+            JSONObject col = ordCols.getJSONObject(0);
+            String recVal = col.getString("value");
+            int recInt = Integer.parseInt(recVal);
+            if (recInt < sizeOfSeqTable || recInt >= newSeqNumbers) {
+              fail("testGetAllDataChangesSince_ExpectPass: row returned from get all changes was not in valid range");
+            }
+          }
+        }
+      }
+
+      wc.deleteTableDefinition(agg_url, appId, testTableId, tableSchemaETag);
+      
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetAllDataChangesSince_ExpectPass: expected pass");
+    }
+  }
+  
+  /*
    * test query in time range with savepointTimestamp date 
    */
   public void testQueryRowsInTimeRangeWithSavepointTimestamp_ExpectPass() {
@@ -2992,7 +3093,7 @@ public class SyncClientTest extends TestCase {
     String tableSchemaETag = null;
 
     String csvFile = absolutePathOfTestFiles + "geotaggerTest/definition.csv";
-    String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.edited.csv";
+    String csvDataFile = absolutePathOfTestFiles + "geotaggerTest/geotagger.groups.csv";
     try {
       SyncClient wc = new SyncClient();
       wc.init(host, userName, password);
@@ -3297,43 +3398,43 @@ public class SyncClientTest extends TestCase {
 //    }
 //  }
   
-  public void testUploadPermissionCSVWithValidUser_ExpectPass() {
-    String relativeTestFilePath = "permissions/perm-file.csv";
-    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
-    String testUserName = "mailto:testerodk@gmail.com";
-    String userIdStr = "user_id";
-    boolean foundUser = false;
-
-    try {
-      SyncClient wc = new SyncClient();
-      wc.init(host, userName, password);
-
-      int rspCode = wc.uploadPermissionCSV(agg_url, appId, testFile);
-      
-      System.out.println("rspCode = " + rspCode);
-      
-      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
-      
-      if (result != null) {
-        
-        assertEquals(rspCode, 200);
-        
-        for(int i = 0; i < result.size(); i++) {
-          Map<String,Object> userMap = result.get(i);
-          if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
-            foundUser = true;
-            break;
-          }
-        }
-        
-        assertTrue(foundUser);
-      }
-
-      wc.close();
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
-    }
-  }
+//  public void testUploadPermissionCSVWithValidUser_ExpectPass() {
+//    String relativeTestFilePath = "permissions/perm-file.csv";
+//    String testFile = absolutePathOfTestFiles + relativeTestFilePath;
+//    String testUserName = "mailto:testerodk@gmail.com";
+//    String userIdStr = "user_id";
+//    boolean foundUser = false;
+//
+//    try {
+//      SyncClient wc = new SyncClient();
+//      wc.init(host, userName, password);
+//
+//      int rspCode = wc.uploadPermissionCSV(agg_url, appId, testFile);
+//      
+//      System.out.println("rspCode = " + rspCode);
+//      
+//      ArrayList<Map<String,Object>> result = wc.getUsers(agg_url);
+//      
+//      if (result != null) {
+//        
+//        assertEquals(rspCode, 200);
+//        
+//        for(int i = 0; i < result.size(); i++) {
+//          Map<String,Object> userMap = result.get(i);
+//          if(userMap.containsKey(userIdStr) && testUserName.equals(userMap.get(userIdStr))) {
+//            foundUser = true;
+//            break;
+//          }
+//        }
+//        
+//        assertTrue(foundUser);
+//      }
+//
+//      wc.close();
+//
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
+//    }
+//  }
 }
