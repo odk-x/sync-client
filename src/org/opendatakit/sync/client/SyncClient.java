@@ -211,7 +211,7 @@ public class SyncClient {
 
   public static final String TYPE_STR = "type";
   
-  public static final String USERS_STR = "users";
+  public static final String USERS_STR = "usersInfo";
   
   public static final String LIST_STR = "list";
   
@@ -451,7 +451,7 @@ public class SyncClient {
    * @throws IOException due to file errors
    * @throws JSONException due to JSON errors
    */
-  public ArrayList<Map<String,Object>> getUsers(String agg_url) throws ClientProtocolException, 
+  public ArrayList<Map<String,Object>> getUsers(String agg_url, String appId) throws ClientProtocolException,
       IOException, JSONException {
     ArrayList<Map<String,Object>> rolesList = null;
 
@@ -463,7 +463,7 @@ public class SyncClient {
 
     try {
 
-      String agg_uri = UriUtils.getUsersListUri(agg_url);
+      String agg_uri = UriUtils.getUsersListUri(agg_url, appId);
 
       System.out.println("getUsers: agg uri is " + agg_uri);
 
