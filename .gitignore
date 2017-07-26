@@ -1,2 +1,5 @@
 /testfiles/test/downloadedData
 /target
+
+*.iml
+.idea
