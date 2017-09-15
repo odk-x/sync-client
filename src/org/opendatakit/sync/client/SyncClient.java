@@ -147,6 +147,10 @@ public class SyncClient {
 
   public static final String SAVEPOINT_CREATOR_JSON = "savepointCreator";
 
+  public static final String CREATE_USER_JSON = "createUser";
+
+  public static final String LAST_UPDATE_USER = "lastUpdateUser";
+
   public static final String ROW_ETAG_JSON = "rowETag";
 
   public static final String ROWS_STR_JSON = "rows";
@@ -186,6 +190,10 @@ public class SyncClient {
   public static final String SAVEPOINT_TIMESTAMP_ROW_DEF = "_savepoint_timestamp";
 
   public static final String SAVEPOINT_CREATOR_ROW_DEF = "_savepoint_creator";
+
+  public static final String CREATE_USER_ROW_DEF = "_create_user";
+
+  public static final String LAST_UPDATE_USER_ROW_DEF = "_last_update_user";
 
   public static final String ROW_ETAG_ROW_DEF = "_row_etag";
 
