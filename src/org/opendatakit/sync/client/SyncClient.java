@@ -153,6 +153,10 @@ public class SyncClient {
 
   public static final String ROW_ETAG_JSON = "rowETag";
 
+  public static final String DATA_ETAG_AT_MODIFICATION_JSON = "dataETagAtModification";
+
+  public static final String DELETED_JSON = "deleted";
+
   public static final String ROWS_STR_JSON = "rows";
 
   public static final String FILTER_SCOPE_JSON = "filterScope";
@@ -206,6 +210,10 @@ public class SyncClient {
   public static final String GROUP_MODIFY_ROW_DEF = "_group_modify";
   
   public static final String GROUP_PRIVILEGED_ROW_DEF = "_group_privileged";
+
+  public static final String DATA_ETAG_AT_MODIFICATION_ROW_DEF = "_data_etag_at_modification";
+
+  public static final String DELETED_ROW_DEF = "_deleted";
 
   public static final String ORDERED_COLUMNS_DEF = "orderedColumns";
 
