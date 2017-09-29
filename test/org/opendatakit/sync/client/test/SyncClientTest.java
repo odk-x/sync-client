@@ -18,6 +18,7 @@ import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.DataKeyValue;
+import org.opendatakit.aggregate.odktables.rest.entity.PrivilegesInfo;
 import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcome;
@@ -3437,4 +3438,33 @@ public class SyncClientTest extends TestCase {
 //      TestCase.fail("testUploadPermissionCSVWithValidUser_ExpectPass: expected pass uploading user permissions");
 //    }
 //  }
+  
+  /*
+   * testGetPrivilegesInfo_ExpectPass
+   */
+  public void testGetPrivilegesInfo_ExpectPass() {
+    try {
+      SyncClient wc = new SyncClient();
+      wc.init(host, userName, password);
+
+      PrivilegesInfo privInfo = wc.getPrivilegesInfo(agg_url, appId);
+      if (privInfo == null) {
+        throw new IllegalArgumentException("user must have privilegesInfo");
+      }
+      
+      String privUser = privInfo.getUser_id();
+      if (privUser.startsWith("username:")) {
+        assertEquals(privUser, "username:" + userName);
+      } else if (privUser.startsWith("mailto:")) {
+        assertEquals(privUser, "mailto:" + userName);
+      } 
+
+      wc.close();
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      TestCase.fail("testGetPrivilegesInfo_ExpectPass: expected pass getting privileges Info");
+    }
+  }
+
 }
