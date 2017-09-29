@@ -7,6 +7,12 @@ public class UriUtils {
         + SyncClient.SSL_STR + SyncClient.SEPARATOR_STR + SyncClient.RESET_USERS_AND_PERMISSIONS;
     return usersUri;
   }
+  
+  public static String getPrivilegesInfoUri(String uri, String appId) {
+	    String usersUri = uri + SyncClient.SEPARATOR_STR 
+	        + appId + SyncClient.SEPARATOR_STR + SyncClient.PRIVILEGES_INFO_STR;
+	    return usersUri;
+	  }
 
   public static String getUsersListUri(String uri, String appId) {
     String usersUri = uri + SyncClient.SEPARATOR_STR + appId + SyncClient.SEPARATOR_STR + SyncClient.USERS_STR;
