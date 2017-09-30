@@ -16,13 +16,24 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.StreamHandler;
 import java.util.zip.DataFormatException;
 
 import org.apache.commons.fileupload.MultipartStream;
@@ -66,6 +77,7 @@ import org.opendatakit.aggregate.odktables.rest.entity.Row;
 import org.opendatakit.aggregate.odktables.rest.entity.RowFilterScope;
 import org.opendatakit.aggregate.odktables.rest.entity.RowList;
 import org.opendatakit.aggregate.odktables.rest.entity.RowOutcomeList;
+import org.opendatakit.aggregate.odktables.rest.entity.PrivilegesInfo;
 import org.apache.http.entity.mime.*;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 
@@ -147,7 +159,15 @@ public class SyncClient {
 
   public static final String SAVEPOINT_CREATOR_JSON = "savepointCreator";
 
+  public static final String CREATE_USER_JSON = "createUser";
+
+  public static final String LAST_UPDATE_USER = "lastUpdateUser";
+
   public static final String ROW_ETAG_JSON = "rowETag";
+
+  public static final String DATA_ETAG_AT_MODIFICATION_JSON = "dataETagAtModification";
+
+  public static final String DELETED_JSON = "deleted";
 
   public static final String ROWS_STR_JSON = "rows";
 
@@ -187,6 +207,10 @@ public class SyncClient {
 
   public static final String SAVEPOINT_CREATOR_ROW_DEF = "_savepoint_creator";
 
+  public static final String CREATE_USER_ROW_DEF = "_create_user";
+
+  public static final String LAST_UPDATE_USER_ROW_DEF = "_last_update_user";
+
   public static final String ROW_ETAG_ROW_DEF = "_row_etag";
 
   public static final String DEFAULT_ACCESS_ROW_DEF = "_default_access";
@@ -198,6 +222,10 @@ public class SyncClient {
   public static final String GROUP_MODIFY_ROW_DEF = "_group_modify";
   
   public static final String GROUP_PRIVILEGED_ROW_DEF = "_group_privileged";
+
+  public static final String DATA_ETAG_AT_MODIFICATION_ROW_DEF = "_data_etag_at_modification";
+
+  public static final String DELETED_ROW_DEF = "_deleted";
 
   public static final String ORDERED_COLUMNS_DEF = "orderedColumns";
 
@@ -212,6 +240,8 @@ public class SyncClient {
   public static final String TYPE_STR = "type";
   
   public static final String USERS_STR = "usersInfo";
+  
+  public static final String PRIVILEGES_INFO_STR = "privilegesInfo";
   
   public static final String LIST_STR = "list";
   
@@ -275,7 +305,7 @@ public class SyncClient {
     m.put("json", "application/json"); // assumes UTF-8
     mimeMapping = m;
   }
-
+  
   private String determineContentType(String fileName) {
     int ext = fileName.lastIndexOf('.');
     if (ext == -1) {
@@ -288,14 +318,14 @@ public class SyncClient {
     }
     return mimeType;
   }
-
+  
   /**
    * Init client with default parameters
    * 
    */
   public void init() {
     httpClient = HttpClientBuilder.create().build();
-
+  
   }
 
   /**
@@ -375,7 +405,7 @@ public class SyncClient {
 	        .setDefaultRequestConfig(requestConfig).build();
 	    
 
-	  }
+  }
   
   	public boolean isAuthenticationEnabled() {
   	    if (localContext == null) {
@@ -445,6 +475,9 @@ public class SyncClient {
    * @param agg_url
    *          the url for the server
    *          
+   * @param appId
+   *          the app_id for the server
+   *          
    * @return a ArrayList of Map of users
    * 
    * @throws ClientProtocolException due to http errors
@@ -493,6 +526,66 @@ public class SyncClient {
     }
 
     return rolesList;
+  }
+  
+  /**
+   * Returns privilegesInfo for the user
+   * 
+   * @param agg_url
+   *          the url for the server
+   * 
+   * @param appId
+   *          the appId for the server
+   * 
+   * @return a ArrayList of Map of users
+   * 
+   * @throws ClientProtocolException
+   *           due to http errors
+   * @throws IOException
+   *           due to file errors
+   * @throws JSONException
+   *           due to JSON errors
+   */
+  public PrivilegesInfo getPrivilegesInfo(String agg_url, String appId)
+      throws ClientProtocolException, IOException, JSONException {
+    PrivilegesInfo privilegesInfo = null;
+
+    if (httpClient == null) {
+      throw new IllegalStateException("The initialization function must be called");
+    }
+
+    HttpGet request = null;
+
+    try {
+      String agg_uri = UriUtils.getPrivilegesInfoUri(agg_url, appId);
+
+      System.out.println("getPrivilegesInfo: agg uri is " + agg_uri);
+
+      request = new HttpGet(agg_uri);
+      HttpResponse response = httpRequestExecute(request, mimeMapping.get(JSON_STR), false);
+
+      String res = convertResponseToString(response);
+
+      if (response.getStatusLine().getStatusCode() < 200
+          || response.getStatusLine().getStatusCode() >= 300) {
+        System.out.println("getPrivilegesInfo: return null status code: "
+            + response.getStatusLine().getStatusCode());
+        System.out.println("getPrivilegesInfo: response is " + res);
+        return null;
+      }
+
+      ObjectMapper mapper = new ObjectMapper();
+
+      privilegesInfo = mapper.readValue(res, PrivilegesInfo.class);
+
+      System.out.println("getPrivilegesInfo: result is " + privilegesInfo.toString());
+    } finally {
+      if (request != null) {
+        request.releaseConnection();
+      }
+    }
+
+    return privilegesInfo;
   }
 
   /**
@@ -3326,7 +3419,7 @@ public class SyncClient {
             try {
               os.close();
             } catch (IOException e) {
-              e.printStackTrace();
+              e.printStackTrace();	
               System.out
                   .println("batchGetFilesForRow: Download file batches: Error closing output stream");
             }
@@ -3335,7 +3428,7 @@ public class SyncClient {
         nextPart = multipartStream.readBoundary();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+    	e.printStackTrace();
     } finally {
       if (request != null) {
         request.releaseConnection();
@@ -3682,7 +3775,7 @@ public class SyncClient {
         httpClient.close();
       } catch (IOException ioe) {
         ioe.printStackTrace();
-      }
+    	}
     }
   }
 }
