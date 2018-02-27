@@ -348,8 +348,10 @@ public class SyncClient {
     
     credsProvider = new BasicCredentialsProvider();
 
+    AuthScope aDigest = new AuthScope(host, -1, null, AuthSchemes.DIGEST);
     AuthScope a = new AuthScope(host, -1, null, AuthSchemes.BASIC);
     Credentials c = new UsernamePasswordCredentials(userName, password);
+    credsProvider.setCredentials(aDigest, c);
     credsProvider.setCredentials(a, c);
 
     localContext.setCredentialsProvider(credsProvider);
@@ -359,6 +361,7 @@ public class SyncClient {
 
     // if possible, bias toward digest auth (may not be in 4.0 beta 2)
     List<String> targetPreferredAuthSchemes = new ArrayList<String>();
+    targetPreferredAuthSchemes.add(AuthSchemes.DIGEST);
     targetPreferredAuthSchemes.add(AuthSchemes.BASIC);
 
     RequestConfig requestConfig = RequestConfig
