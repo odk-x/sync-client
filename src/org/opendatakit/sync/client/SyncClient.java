@@ -63,6 +63,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONException;
@@ -324,7 +325,10 @@ public class SyncClient {
    * 
    */
   public void init() {
-    httpClient = HttpClientBuilder.create().build();
+    httpClient = HttpClientBuilder
+        .create()
+        .setRedirectStrategy(new LaxRedirectStrategy())
+        .build();
   
   }
 
@@ -377,9 +381,12 @@ public class SyncClient {
      	.setProxyPreferredAuthSchemes(targetPreferredAuthSchemes)
         .build();
 
-    httpClient = HttpClientBuilder.create().setDefaultSocketConfig(socketConfig)
-        .setDefaultRequestConfig(requestConfig).build();
-    
+    httpClient = HttpClientBuilder
+        .create()
+        .setDefaultSocketConfig(socketConfig)
+        .setDefaultRequestConfig(requestConfig)
+        .setRedirectStrategy(new LaxRedirectStrategy())
+        .build();
   }
 
   public void initAnonymous(String host) {
