@@ -7,7 +7,7 @@
   <version>2.0.6</version>
   <name>ODK Sync REST Client</name>
   <properties>
-    <org.opendatakit-aggregate-rest-interface-version>2017-06-22</org.opendatakit-aggregate-rest-interface-version>
+    <org.opendatakit-aggregate-rest-interface-version>2018-03-30</org.opendatakit-aggregate-rest-interface-version>
 
     <com.fasterxml.jackson.version>2.8.5</com.fasterxml.jackson.version>
 
