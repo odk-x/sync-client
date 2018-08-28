@@ -7,10 +7,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.wink.json4j.JSONArray;
 import org.apache.wink.json4j.JSONObject;
@@ -2396,7 +2393,7 @@ public class SyncClientTest extends TestCase {
         JSONArray ordCols = new JSONArray();
         JSONObject col = new JSONObject();
         col.put("column", "Date_and_Time");
-        col.put("value", TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
+        col.put("value", TableConstants.nanoSecondsFromMillis(System.currentTimeMillis(), Locale.ROOT));
         ordCols.add(col);
         
         tempRow.put(SyncClient.ORDERED_COLUMNS_DEF, ordCols);

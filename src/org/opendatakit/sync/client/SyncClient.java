@@ -2416,7 +2416,8 @@ public class SyncClient {
       }
 
       if (rowObj.getSavepointTimestamp() == null || rowObj.getSavepointTimestamp().length() == 0) {
-        savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+        savepointTimestamp =
+            TableConstants.nanoSecondsFromMillis(System.currentTimeMillis(), Locale.ROOT);
         rowObj.setSavepointTimestamp(savepointTimestamp);
       }
 
@@ -2473,7 +2474,7 @@ public class SyncClient {
     String formId = null;
     String locale = Locale.ENGLISH.getLanguage();
     String savepointType = SavepointTypeManipulator.complete();
-    String savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+    String savepointTimestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis(), Locale.ROOT);
     String savepointCreator = "anonymous";
     RowFilterScope defaultScope = RowFilterScope.EMPTY_ROW_FILTER;
     String dataETag = null;
