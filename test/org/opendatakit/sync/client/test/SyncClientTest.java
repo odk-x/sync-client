@@ -2486,8 +2486,8 @@ public class SyncClientTest extends TestCase {
     String colName = "utf_test_col";
     String colKey = "utf_test_col";
     String colType = "string";
-    String utf_val = "à¤¤à¥�à¤°à¤‚à¤¤ à¤…à¤¸à¥�à¤ªà¤¤à¤¾à¤² à¤°à¥‡à¤«à¤° à¤•à¤°à¥‡à¤‚ à¤µ à¤°à¤¾à¤¸à¥�à¤¤à¥‡ à¤®à¥ˆà¤‚ à¤¶à¤¿à¤¶à¥� à¤•à¥‹ à¤“. à¤†à¤°. à¤�à¤¸ à¤¦à¥‡à¤¤à¥‡à¤°à¤¹à¥‡à¤‚";
-
+	String utf_val = "à¤¤à¥�à¤°à¤‚à¤¤ à¤…à¤¸à¥�à¤ªà¤¤à¤¾à¤² à¤°à¥‡à¤«à¤° à¤•à¤°à¥‡à¤‚ à¤µ à¤°à¤¾à¤¸à¥�à¤¤à¥�";
+	
     String testTableSchemaETag = "testCreateOrUpdateRowWithUTF8_ExpectPass";
     String tableSchemaETag = null;
     String listOfChildElements = "[]";
