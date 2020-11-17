@@ -1,1 +1,2 @@
-mvn install:install-file -Dfile=odk-rest-interface-2.1.6.jar -Djavadoc=odk-rest-interface-2.1.6-javadoc.jar -Dsources=odk-rest-interface-2.1.6-sources.jar -DgroupId=org.opendatakit -DartifactId=odk-rest-interface -Dversion=2.1.6 -Dpackaging=jar -DupdateReleaseInfo=true
+mvn install:install-file -Dfile=odk-rest-interface-2.1.7.jar -Djavadoc=odk-rest-interface-2.1.7-javadoc.jar -Dsources=odk-rest-interface-2.1.7-sources.jar -DgroupId=org.opendatakit -DartifactId=odk-rest-interface -Dversion=2.1.7 -Dpackaging=jar -DupdateReleaseInfo=true
+1
