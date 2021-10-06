@@ -1320,7 +1320,14 @@ public class SyncClient {
       JSONException {
     JSONObject obj;
     String res = convertResponseToString(response);
-    obj = new JSONObject(res);
+    try {
+      obj = new JSONObject(res);
+    }
+    catch (JSONException exception){
+      JSONException modifiedException = new JSONException(res);
+      modifiedException.setStackTrace(exception.getStackTrace());
+      throw modifiedException;
+    }
     return obj;
   }
 
