@@ -1714,26 +1714,44 @@ public class SyncClient {
     // has the right header
     String[] firstLine = reader.readNext();
 
-    if (firstLine.length != 4) {
-      throw new DataFormatException(
-          "The csv file used to create a table does not have the correct number of columns");
+    int elementKeyIndex=-1;
+    int elementNameIndex=-1;
+    int elementTypeIndex=-1;
+    int listChildElementKeysIndex=-1;
+
+    for(int i=0;i<firstLine.length;i++)
+    {
+      if(firstLine[i].equals(ELEM_KEY_TABLE_DEF))
+      {
+        elementKeyIndex = i;
+      }
+      else if(firstLine[i].equals(ELEM_NAME_TABLE_DEF))
+      {
+        elementNameIndex = i;
+      }
+      else if(firstLine[i].equals(ELEM_TYPE_TABLE_DEF)){
+        elementTypeIndex=i;
+      }
+      else if(firstLine[i].equals(LIST_CHILD_ELEM_KEYS_TABLE_DEF)){
+        listChildElementKeysIndex=i;
+      }
     }
 
     // Make sure that the first row of the csv file
     // has the right columns
-    if (!firstLine[0].equals(ELEM_KEY_TABLE_DEF) || !firstLine[1].equals(ELEM_NAME_TABLE_DEF)
-        || !firstLine[2].equals(ELEM_TYPE_TABLE_DEF)
-        || !firstLine[3].equals(LIST_CHILD_ELEM_KEYS_TABLE_DEF)) {
+    // if any index is -1 then that column is not found in the csv
+    if (elementKeyIndex==-1||elementNameIndex==-1||elementTypeIndex==-1||listChildElementKeysIndex==-1) {
       throw new DataFormatException(
-          "The csv file used to create a table does not have the correct columns in the first row");
+              "The csv file used to create a table does not have the correct columns in the first row");
     }
 
     String[] line;
 
     while ((line = reader.readNext()) != null) {
-      col = new Column(line[0], line[1], line[2], line[3]);
+      col = new Column(line[elementKeyIndex], line[elementNameIndex], line[elementTypeIndex], line[listChildElementKeysIndex]);
       cols.add(col);
     }
+
 
     resultingTable = createTable(uri, appId, tableId, schemaETag, cols);
 
