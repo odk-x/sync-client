@@ -11,7 +11,7 @@
     <org.opendatakit-odk-rest-interface-version>2.1.9</org.opendatakit-odk-rest-interface-version>
 
     <com.fasterxml.jackson.version>2.11.4</com.fasterxml.jackson.version>
-    <com.fasterxml.jackson.databind.version>2.11.4</com.fasterxml.jackson.databind.version>
+    <com.fasterxml.jackson.databind.version>2.12.6.1</com.fasterxml.jackson.databind.version>
 
     <org.slf4j.version>1.7.30</org.slf4j.version>
 
