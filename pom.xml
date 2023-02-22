@@ -19,7 +19,7 @@
     <org.apache.httpcomponents-httpcore-version>4.4.14</org.apache.httpcomponents-httpcore-version>
     <org.apache.httpcomponents-httpmime-version>4.5.13</org.apache.httpcomponents-httpmime-version>
 
-    <commons-fileupload-version>1.4</commons-fileupload-version>
+    <commons-fileupload-version>1.5</commons-fileupload-version>
     <org.apache.commons-text.version>1.9</org.apache.commons-text.version>
 
     <org.apache.wink.version>1.4</org.apache.wink.version>
