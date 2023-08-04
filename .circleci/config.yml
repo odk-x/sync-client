@@ -16,7 +16,7 @@ jobs:
       - checkout
       - run:
           name: Build and Deploy
-          command: mvn -gs settings.xml clean deploy
+          command: mvn -gs settings.xml install
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
