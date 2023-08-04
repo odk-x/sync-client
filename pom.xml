@@ -47,7 +47,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <!--link to odk-rest-interface-jar -->
     <repositories>
         <repository>
             <id>github-maven</id>
@@ -58,6 +57,7 @@
             </snapshots>
         </repository>
     </repositories>
+
   <dependencies>
     <!-- ODK -->
 
