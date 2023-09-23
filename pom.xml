@@ -51,7 +51,7 @@
         <repository>
             <id>github-maven</id>
             <name>GitHub Maven Repository</name>
-            <url>https://maven.pkg.github.com/tr-sangale/sync-endpoint</url>
+            <url>https://maven.pkg.github.com/odk-x/sync-endpoint</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
