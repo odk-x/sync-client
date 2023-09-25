@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version>${project.version}</version>
+  <version>1.0.0-${project.version}</version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -183,7 +183,7 @@
                     </goals>
                     <configuration>
                         <source>
-                            project.version = "1.0.0-" + 'git rev-parse --short HEAD'.execute().text.trim()
+                            project.version = 'git rev-parse --short HEAD'.execute().text.trim()
                         </source>
                     </configuration>
                 </execution>
