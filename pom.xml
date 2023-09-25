@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version><![CDATA[2.0.0-${git.commit.hash.abbrev}]]></version>
+  <version>${project.version}</version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -169,40 +169,26 @@
     </testResources>
 
     <plugins>
-      <plugin>
-  <groupId>pl.project13.maven</groupId>
-  <artifactId>git-commit-id-plugin</artifactId>
-  <version>2.2.6</version>
-  <executions>
-    <execution>
-      <id>get-the-git-infos</id>
-      <goals>
-        <goal>revision</goal>
-      </goals>
-      <phase>package</phase>
-    </execution>
-  </executions>
-  <configuration>
-    <!-- everything else is default -->
-    <generateGitPropertiesFile>false</generateGitPropertiesFile>
-  </configuration>
-</plugin>
-            <plugin>
-                <groupId>com.github.ekryd.echo-maven-plugin</groupId>
-                <artifactId>echo-maven-plugin</artifactId>
-                <version>1.2.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>echo</goal>
-                        </goals>
-                        <configuration>
-                            <message>GIT commit id: ${git.commit.id}</message>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+     
+  <plugin>
+            <groupId>org.codehaus.gmaven</groupId>
+            <artifactId>gmaven-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+                <execution>
+                    <id>set-version</id>
+                    <phase>initialize</phase>
+                    <goals>
+                        <goal>execute</goal>
+                    </goals>
+                    <configuration>
+                        <source>
+                            project.version = "1.0.0-" + 'git rev-parse --short HEAD'.execute().text.trim()
+                        </source>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
     <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
