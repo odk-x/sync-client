@@ -181,6 +181,15 @@
         </goals>
       <phase>initialize</phase>
     </execution>
+    <execution>
+                        <id>validate-the-git-infos</id>
+                        <goals>
+                            <goal>validateRevision</goal>
+                        </goals>
+                        <!-- *NOTE*: The default phase of validateRevision is verify, but in case you want to
+                                     change it, you can do so by adding the phase here -->
+                        <phase>package</phase>
+                    </execution>
 </executions>
 <configuration>
  <generateGitPropertiesFile>true</generateGitPropertiesFile>
