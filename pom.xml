@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version><![CDATA[2.0.0-${gitHash}]]></version>
+  <version><![CDATA[2.0.0-${git.commit.hash.abbrev}]]></version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -169,6 +169,24 @@
     </testResources>
 
     <plugins>
+      <plugin>
+  <groupId>pl.project13.maven</groupId>
+  <artifactId>git-commit-id-plugin</artifactId>
+  <version>2.2.6</version>
+  <executions>
+    <execution>
+      <id>get-the-git-infos</id>
+      <goals>
+        <goal>revision</goal>
+      </goals>
+      <phase>initialize</phase>
+    </execution>
+  </executions>
+  <configuration>
+    <!-- everything else is default -->
+    <generateGitPropertiesFile>false</generateGitPropertiesFile>
+  </configuration>
+</plugin>
     <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
