@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version>${gitHash}</version>
+  <version><![CDATA[2.0.0-${gitHash}]]></version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
