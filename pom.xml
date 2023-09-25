@@ -179,7 +179,7 @@
                     <goals>
                         <goal>exec</goal>
                     </goals>
-                    <phase>generate-resources</phase>
+                    <phase>validate</phase>
                     <configuration>
                         <executable>git</executable>
                         <arguments>
