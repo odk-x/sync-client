@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.0-${project.version}</version>
+  <version>1.0.0-${my.project.version}</version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -14,6 +14,7 @@
          </repository>
   </distributionManagement>
   <properties>
+    <my.project.version>${project.version}</my.project.version>
     <java.version>1.8</java.version>
     <org.opendatakit-odk-rest-interface-version>2.0.0</org.opendatakit-odk-rest-interface-version>
 
