@@ -180,7 +180,7 @@
                     <goals>
                         <goal>exec</goal>
                     </goals>
-                    <phase>intialize</phase>
+                    <phase>validate</phase>
                     <configuration>
                         <executable>git</executable>
                         <arguments>
