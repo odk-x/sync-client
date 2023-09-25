@@ -179,21 +179,18 @@
         <goals>
             <goal>revision</goal>
         </goals>
+      <phase>initialize</phase>
     </execution>
 </executions>
 <configuration>
-    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
-    <prefix>git</prefix>
-    <verbose>false</verbose>
-    <generateGitPropertiesFile>true</generateGitPropertiesFile>
-    <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
-    <format>json</format>
-    <gitDescribe>
-        <skip>false</skip>
-        <always>false</always>
-        <dirty>-dirty</dirty>
-    </gitDescribe>
-</configuration>
+ <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+                    <includeOnlyProperties>
+                        <includeOnlyProperty>^git.build.(time|version)$</includeOnlyProperty>
+                        <includeOnlyProperty>^git.commit.id.(abbrev|full)$</includeOnlyProperty>
+                    </includeOnlyProperties>
+                    <commitIdGenerationMode>full</commitIdGenerationMode>
+                </configuration>
         </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
