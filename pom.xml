@@ -179,7 +179,7 @@
       <goals>
         <goal>revision</goal>
       </goals>
-      <phase>initialize</phase>
+      <phase>package</phase>
     </execution>
   </executions>
   <configuration>
