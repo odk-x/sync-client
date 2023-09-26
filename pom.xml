@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version></version>
+  <version>${project.version}</version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -201,7 +201,7 @@
                         <configuration>
                             <target>
                                 <propertyfile file="target/classes/git.properties">
-                                    <entry key="version" value="${git.commit.id.abbrev}" />
+                                    <entry key="project.version" value="${git.commit.id.abbrev}" />
                                 </propertyfile>
                             </target>
                         </configuration>
