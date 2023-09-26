@@ -19,10 +19,11 @@ jobs:
           command: |
             mvn -gs settings.xml clean install  
       - run:
-          name: print
+          name: Set project version
           command: |
-            cat target/classes/git.properties 
-            GIT_HASH=$(cat target/classes/git.properties | grep 'git.commit.id.abbrev' | cut -d'=' -f2)    
+            # Read the git.properties file and set the version
+            VERSION=$(grep 'git.commit.id.abbrev' target/classes/git.properties | cut -d'=' -f2 | tr -d '[:space:]')
+            mvn versions:set -DnewVersion="1.0.0-${VERSION}" 
       - run:
           name: Build and Deploy
           command: |
