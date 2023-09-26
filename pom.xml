@@ -4,7 +4,7 @@
   <groupId>com.github</groupId>
   <artifactId>sync-client</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.0-${my.project.version}</version>
+  <version>4.0.0-${git.commit.id.abbrev}</version>
   <name>ODK-X Sync REST Client</name>
   <distributionManagement>
          <repository>
@@ -172,23 +172,20 @@
     <plugins>
      
   <plugin>
-            <groupId>org.codehaus.gmaven</groupId>
-            <artifactId>gmaven-plugin</artifactId>
-            <version>1.6</version>
+            <groupId>pl.project13.maven</groupId>
+            <artifactId>git-commit-id-plugin</artifactId>
+            <version>4.0.0</version>
             <executions>
                 <execution>
-                    <id>set-version</id>
-                    <phase>initialize</phase>
                     <goals>
-                        <goal>execute</goal>
+                        <goal>revision</goal>
                     </goals>
-                    <configuration>
-                        <source>
-                            project.version = 'git rev-parse --short HEAD'.execute().text.trim()
-                        </source>
-                    </configuration>
                 </execution>
             </executions>
+            <configuration>
+                <dateFormat>yyyyMMdd-HHmmss</dateFormat> <!-- Customize the date format if needed -->
+                <generateGitPropertiesFile>true</generateGitPropertiesFile>
+            </configuration>
         </plugin>
     <plugin>
             <groupId>org.codehaus.mojo</groupId>
