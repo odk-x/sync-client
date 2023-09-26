@@ -22,8 +22,9 @@ jobs:
           name: Set project version
           command: |
             # Read the git.properties file and set the version
-            VERSION=$(grep 'git.commit.id.abbrev' target/classes/git.properties | cut -d'=' -f2 | tr -d '[:space:]')
-            mvn versions:set -DnewVersion="1.0.0-${VERSION}" 
+            GIT_HASH=$(grep 'git.commit.id.abbrev' target/classes/git.properties | cut -d'=' -f2 | tr -d '[:space:]')
+            BUILD_TIME=$(grep 'git.build.time' target/classes/git.properties | cut -d'=' -f2 | tr -d '[:space:]')
+            mvn versions:set -DnewVersion="1.0.0-${BUILD_TIME}-${GIT_HASH}" 
       - run:
           name: Build and Deploy
           command: |
