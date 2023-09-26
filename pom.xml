@@ -14,8 +14,7 @@
          </repository>
   </distributionManagement>
   <properties>
-    <revision>4.0.0-${git.commit.id.abbrev}</revision>
-    <my.project.version>${project.version}</my.project.version>
+    <project.version>${my.project.version}</project.version>
     <java.version>1.8</java.version>
     <org.opendatakit-odk-rest-interface-version>2.0.0</org.opendatakit-odk-rest-interface-version>
 
@@ -201,7 +200,7 @@
                         <configuration>
                             <target>
                                 <propertyfile file="target/classes/git.properties">
-                                    <entry key="project.version" value="${git.commit.id.abbrev}" />
+                                    <entry key="my.project.version" value="${git.commit.id.abbrev}" />
                                 </propertyfile>
                             </target>
                         </configuration>
