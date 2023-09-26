@@ -17,7 +17,12 @@ jobs:
       - run:
           name: mvn install 
           command: |
-            mvn -gs settings.xml clean install  
+            mvn -gs settings.xml clean install 
+
+      - run: 
+          name: print 
+          command: |
+            cat target/classes/git.properties 
       - run:
           name: Set project version
           command: |
