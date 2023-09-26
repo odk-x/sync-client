@@ -15,9 +15,17 @@ jobs:
     steps:
       - checkout
       - run:
+          name: mvn install 
+          command: |
+            mvn -gs settings.xml clean install  
+      - run:
+          name: print
+          command: |
+            cat target/classes/git.properties     
+      - run:
           name: Build and Deploy
           command: |
-            mvn -gs settings.xml clean deploy
+            mvn -gs settings.xml deploy
 
 # Orchestrate jobs using workflow
 # See: https://circleci.com/docs/configuration-reference/#workflows
