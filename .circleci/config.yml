@@ -21,11 +21,16 @@ jobs:
       - run:
           name: print
           command: |
-            cat target/classes/git.properties     
+            cat target/classes/git.properties 
+            GIT_HASH=$(cat target/classes/git.properties | grep 'git.commit.id.abbrev' | cut -d'=' -f2)    
       - run:
           name: Build and Deploy
           command: |
-            mvn -gs settings.xml deploy
+            # mvn -gs settings.xml deploy
+            mvn deploy:deploy-file \
+              -DgroupId=com.github \
+              -DartifactId=sync-client \
+              -Dversion=$GIT_HASH \
 
 # Orchestrate jobs using workflow
 # See: https://circleci.com/docs/configuration-reference/#workflows
