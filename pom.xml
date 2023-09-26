@@ -14,7 +14,6 @@
          </repository>
   </distributionManagement>
   <properties>
-    <project.version>${my.project.version}</project.version>
     <java.version>1.8</java.version>
     <org.opendatakit-odk-rest-interface-version>2.0.0</org.opendatakit-odk-rest-interface-version>
 
@@ -186,49 +185,6 @@
                 <dateFormat>yyyyMMdd-HHmmss</dateFormat> <!-- Customize the date format if needed -->
                 <generateGitPropertiesFile>true</generateGitPropertiesFile>
             </configuration>
-        </plugin>
-      <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <propertyfile file="target/classes/git.properties">
-                                    <entry key="my.project.version" value="${git.commit.id.abbrev}" />
-                                </propertyfile>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-    <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>3.0.0</version>
-            <executions>
-                <execution>
-                    <id>get-git-hash</id>
-                    <goals>
-                        <goal>exec</goal>
-                    </goals>
-                    <phase>validate</phase>
-                    <configuration>
-                        <executable>git</executable>
-                        <arguments>
-                            <argument>rev-parse</argument>
-                            <argument>--short</argument>
-                            <argument>HEAD</argument>
-                        </arguments>
-                        <outputProperty>gitHash</outputProperty>
-                    </configuration>
-                </execution>
-            </executions>
         </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
